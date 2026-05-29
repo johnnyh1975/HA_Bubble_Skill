@@ -1,0 +1,218 @@
+# ============================================================
+# TEST DASHBOARD — ha-bubble-dashboard skill v1.5
+# ============================================================
+# A complete, importable Lovelace dashboard assembling all
+# core recipes (0–5) into a working single view.
+#
+# USAGE MODE — two options:
+#
+# Option A — YAML-mode Lovelace (advanced users):
+#   1. Copy to /config/lovelace/test-dashboard.yaml
+#   2. Add to configuration.yaml:
+#        lovelace:
+#          dashboards:
+#            test-dashboard:
+#              mode: yaml
+#              title: Test Dashboard
+#              filename: lovelace/test-dashboard.yaml
+#   3. Restart HA. Dashboard appears in the sidebar.
+#
+# Option B — UI-mode Lovelace (most users, default HA setup):
+#   1. In HA: Settings → Dashboards → + Add dashboard → Empty dashboard
+#   2. Open the new dashboard → ⋮ → Edit dashboard → ⋮ → Raw config editor
+#   3. Delete all existing content, paste the VIEWS section below
+#      (everything from "title:" to end of file)
+#   4. Save. No restart needed.
+#
+# ENTITIES TO REPLACE (search for # REPLACE in this file):
+#   light.living_room_group         → a light group or any dimmable light
+#   light.living_room_ceiling       → a ceiling light
+#   light.living_room_floor_lamp    → a floor lamp or toggle light
+#   cover.living_room_blinds        → a cover entity (remove section if none)
+#   climate.living_room             → a climate entity (remove section if none)
+#   media_player.living_room_speaker → a media player entity
+#   sensor.living_room_temperature  → a temperature sensor
+#   sensor.living_room_humidity     → a humidity sensor
+#   binary_sensor.living_room_motion → a motion sensor
+#   person.alice                    → a person entity
+#   light.kitchen_group             → a kitchen light group
+#   binary_sensor.kitchen_motion    → kitchen motion sensor
+#   light.bedroom_group             → a bedroom light group
+#   binary_sensor.bedroom_motion    → bedroom motion sensor
+# ============================================================
+
+title: Test Dashboard
+path: test-dashboard
+type: sections
+max_columns: 3
+
+# ── Pop-ups — always top-level, before sections ──────────────
+# These are hidden by default and opened by the HBS footer buttons.
+cards:
+
+  # Recipe 1: Room pop-up — lights, cover, climate
+  - type: custom:bubble-card
+    card_type: pop-up
+    hash: '#living-room'                   # REPLACE: match HBS 1_link below
+    name: Living Room                      # REPLACE: your room name
+    icon: mdi:sofa
+    entity: light.living_room_group        # REPLACE
+    width_desktop: "560px"
+    with_bottom_offset: true
+    cards:
+      - type: custom:bubble-card
+        card_type: separator
+        name: Lights
+        icon: mdi:lightbulb-group
+      - type: custom:bubble-card
+        card_type: button
+        button_type: slider
+        entity: light.living_room_ceiling  # REPLACE
+        name: Ceiling
+        icon: mdi:ceiling-light
+        card_layout: large
+        light_slider_type: brightness
+      - type: custom:bubble-card
+        card_type: button
+        button_type: switch
+        entity: light.living_room_floor_lamp # REPLACE
+        name: Floor Lamp
+        icon: mdi:floor-lamp
+        card_layout: large
+      - type: custom:bubble-card
+        card_type: separator
+        name: Cover
+        icon: mdi:blinds
+      - type: custom:bubble-card
+        card_type: cover
+        entity: cover.living_room_blinds   # REPLACE (or remove this section)
+        name: Blinds
+        card_layout: large
+      - type: custom:bubble-card
+        card_type: separator
+        name: Climate
+        icon: mdi:thermometer
+      - type: custom:bubble-card
+        card_type: climate
+        entity: climate.living_room        # REPLACE (or remove this section)
+        name: Thermostat
+        card_layout: large
+        state_color: true
+        step: 0.5
+
+  # HBS footer — Recipe 2: always the last entry in cards:
+  - type: custom:bubble-card
+    card_type: horizontal-buttons-stack
+    auto_order: true
+    highlight_current_view: true
+    is_sidebar_hidden: true
+    1_name: Living Room                      # REPLACE
+    1_icon: mdi:sofa
+    1_link: '#living-room'                   # REPLACE: match pop-up hash above
+    1_entity: light.living_room_group        # REPLACE
+    1_pir_sensor: binary_sensor.living_room_motion # REPLACE
+    2_name: Kitchen                          # REPLACE
+    2_icon: mdi:chef-hat
+    2_link: '#kitchen'
+    2_entity: light.kitchen_group            # REPLACE
+    2_pir_sensor: binary_sensor.kitchen_motion     # REPLACE
+    3_name: Bedroom                          # REPLACE
+    3_icon: mdi:bed
+    3_link: '#bedroom'
+    3_entity: light.bedroom_group            # REPLACE
+    3_pir_sensor: binary_sensor.bedroom_motion     # REPLACE
+
+# ── Sections — the visible card grid ─────────────────────────
+# sections: is a sibling of cards:, not nested inside it.
+sections:
+
+  # Row 1: Full-width sensor chip bar (Recipe 5)
+  - type: grid
+    column_span: 3
+    cards:
+      - type: custom:bubble-card
+        card_type: sub-buttons
+        hide_main_background: true
+        sub_button:
+          bottom:
+            - name: Status
+              buttons_layout: inline
+              justify_content: flex-start
+              group:
+                - entity: sensor.living_room_temperature  # REPLACE
+                  show_state: true
+                  show_icon: true
+                  icon: mdi:thermometer
+                  fill_width: false
+                  show_background: true
+                  show_name: false
+                - entity: sensor.living_room_humidity     # REPLACE
+                  show_state: true
+                  show_icon: true
+                  icon: mdi:water-percent
+                  fill_width: false
+                  show_background: true
+                  show_name: false
+                - entity: binary_sensor.living_room_motion # REPLACE
+                  show_name: true
+                  name: Motion
+                  show_state: false
+                  show_icon: true
+                  fill_width: false
+                  show_background: true
+                  state_background: true
+                - entity: person.alice                    # REPLACE
+                  show_name: true
+                  show_state: false
+                  show_icon: true
+                  fill_width: false
+                  show_background: true
+                  state_background: true
+
+  # Row 2: Room nav button (2 cols) + climate (1 col)
+  - type: grid
+    column_span: 2
+    cards:
+      - type: custom:bubble-card
+        card_type: button
+        button_type: name
+        name: Living Room                  # REPLACE
+        icon: mdi:sofa
+        entity: light.living_room_group    # REPLACE
+        card_layout: large
+        button_action:
+          tap_action:
+            action: navigate
+            navigation_path: '#living-room' # REPLACE: match pop-up hash above
+
+  - type: grid
+    column_span: 1
+    cards:
+      - type: custom:bubble-card   # Recipe 4: climate with HVAC mode
+        card_type: climate
+        entity: climate.living_room        # REPLACE
+        name: Thermostat
+        card_layout: large
+        state_color: true
+        step: 0.5
+        sub_button:
+          main:
+            - name: Mode
+              select_attribute: hvac_modes
+              show_arrow: true
+              show_icon: false
+              show_state: true
+              state_background: false
+              show_background: false
+
+  # Row 3: Recipe 3 — media player with album art
+  - type: grid
+    column_span: 3
+    cards:
+      - type: custom:bubble-card
+        card_type: media-player
+        entity: media_player.living_room_speaker # REPLACE
+        name: Speaker
+        card_layout: large
+        cover_background: true
+        show_state: true

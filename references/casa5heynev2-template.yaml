@@ -1,0 +1,558 @@
+# ============================================================
+# CANONICAL THEME TEMPLATE — ha-bubble-dashboard skill
+# ============================================================
+# This is the base file for ALL theme generation tasks.
+# NEVER reconstruct a theme from scratch — copy this file,
+# rename the top-level key, then apply diffs from:
+#   css-theme-ref.md#how-to-swap-accent   (accent only)
+#   css-theme-ref.md#full-palette-swap    (full palette)
+#   colour-intelligence-ref.md#full-palette-recipes (ready recipes)
+#
+# PALETTE SWAP ZONES (search for the comment text to navigate):
+#   ZONE 1 — ACCENT LEVER  (search "# ZONE 1 — ACCENT LEVER (light)")
+#   ZONE 1 — ACCENT LEVER  (search "# ZONE 1 — ACCENT LEVER (dark)")
+#   ZONE 2 — BACKGROUNDS   (search "# ZONE 2 — BACKGROUNDS (light)")
+#   ZONE 2 — BACKGROUNDS   (search "# ZONE 2 — BACKGROUNDS (dark)")
+#   ZONE 3 — TEXT          (search "# ZONE 3 — TEXT (light)")
+#   ZONE 4 — SIDEBAR       (search "# ZONE 4 — SIDEBAR (light)")
+#   ZONE 4 — SIDEBAR       (search "# ZONE 4 — SIDEBAR (dark)")
+#   ZONE 5 — DIALOG        (search "# ZONE 5 — DIALOG TINT")
+#   ZONE 6 — MUSHROOM      (search "# ZONE 6") — accent-color-rgb +
+#                           mush-rgb-disabled in light + dark
+#   Also update: css-theme-ref.md#how-to-swap-accent for Mushroom sync
+#   See mushroom-theme-ref.md#palette-swap-impact
+#
+# DO NOT CHANGE:
+#   - warning-color: "#FA7575"
+#   - ha-card-border-radius, ha-card-border-width
+#   - All bubble-* mode-independent mappings
+#   - All mush-rgb-state-* mappings (unless intentionally remapping a domain)
+#   - Font family variables
+# ============================================================
+
+# ============================================================
+# Casa5Heyne V2 — Light & Dark
+# Merge: Bubble Card 3.1 + HA Standard + Casa5HeyneV2
+#
+# Prinzip: Bubble-Variablen zeigen per var() auf HA-Variablen.
+# Nur die HA-Basis-Palette wird mit konkreten Werten belegt.
+# Inherited from Casa5: typography system, text aliases,
+# Accent colour opacity scale, MDC, Mushroom, dialogs.
+#
+# Installation:
+#   1. /config/themes/bubble-ha-theme.yaml
+#   2. configuration.yaml:
+#        frontend:
+#          themes: !include_dir_merge_named themes
+#          extra_module_url:
+#            - /local/alexandria-font.js   ← load font
+#   3. Entwicklerwerkzeuge → frontend.reload_themes
+#   4. Profil → Theme → "Bubble HA"
+# ============================================================
+
+Casa5HeyneV2:
+
+  # ────────────────────────────────────────────────────────--
+  # SCHRIFT (mode-unabhängig)
+  # HA 2025+ Variablen — aus Casa5 übernommen
+  # extra_module_url lädt den @import für Google Fonts
+  # ────────────────────────────────────────────────────────--
+  ha-font-family-body:    "Alexandria, sans-serif"
+  ha-font-family-heading: "Alexandria, sans-serif"
+  ha-font-family-code:    "Alexandria, monospace"
+
+  # Legacy Polymer-Variablen — zeigen auf primary-font-family
+  # primary-font-family wird pro Mode gesetzt (s.u.)
+  paper-font-common-base_-_font-family: "var(--primary-font-family)"
+  paper-font-common-code_-_font-family: "var(--primary-font-family)"
+  paper-font-body1_-_font-family:       "var(--primary-font-family)"
+  paper-font-subhead_-_font-family:     "var(--primary-font-family)"
+  paper-font-headline_-_font-family:    "var(--primary-font-family)"
+  paper-font-caption_-_font-family:     "var(--primary-font-family)"
+  paper-font-title_-_font-family:       "var(--primary-font-family)"
+  ha-card-header-font-family:           "var(--primary-font-family)"
+
+  # ────────────────────────────────────────────────────────--
+  # HA KARTEN-BASIS (mode-unabhängig)
+  # Bubble Card leitet seine Strukturvariablen hieraus ab
+  # ────────────────────────────────────────────────────────--
+  ha-card-border-radius:   "16px"
+  ha-card-border-width:    "1px"
+  ha-card-backdrop-filter: "none"
+
+  # MDC Shapes
+  mdc-shape-small:  "8px"
+  mdc-shape-medium: "12px"
+
+  # ────────────────────────────────────────────────────────--
+  # BUBBLE CARD MAPPINGS (mode-unabhängig)
+  # Every variable points via var() to HA variables —
+  # keine festen Farben, automatische Light/Dark-Auflösung
+  # ────────────────────────────────────────────────────────--
+
+  # Backgrounds
+  bubble-main-background-color: >-
+    var(--ha-card-background, var(--card-background-color, #fff))
+  bubble-secondary-background-color: "transparent"
+  bubble-pop-up-main-background-color: >-
+    var(--ha-card-background, var(--card-background-color))
+
+  # Border — composed from HA card variables
+  bubble-border: >-
+    var(--ha-card-border-width, 1px) solid var(--ha-card-border-color, var(--divider-color, #e0e0e0))
+
+  # Radien
+  bubble-border-radius:        "var(--ha-card-border-radius, 16px)"
+  bubble-button-border-radius: "var(--bubble-border-radius)"
+  bubble-icon-border-radius:   "32px"
+  bubble-pop-up-border-radius: "calc(var(--ha-card-border-radius, 16px) * 1.4)"
+
+  # Farben — zeigen auf HA primary-color
+  bubble-accent-color:          "var(--primary-color)"
+  bubble-default-color:         "var(--primary-color)"
+  bubble-button-accent-color:   "var(--accent-color-background-opacity)"
+
+  # Icon background → inactive state (matches CSS module)
+  bubble-icon-background-color:         "var(--state-inactive-color)"
+  bubble-climate-button-background-color: "var(--bubble-icon-background-color)"
+
+  # Dropdowns
+  bubble-select-list-background-color: "var(--card-background-color)"
+  bubble-list-item-accent-color:       "none"
+
+  # MDC Icon-Größe
+  mdc-icon-size: "22px"
+
+  # Sidebar
+  paper-listbox-background-color: "var(--sidebar-background-color)"
+
+  # ════════════════════════════════════════════════════════════
+  # MUSHROOM ↔ HA INTEGRATION BLOCK (mode-independent)
+  # Wires Mushroom's 3-layer colour system to HA theme variables.
+  # See mushroom-theme-ref.md for full documentation.
+  # ZONE 6 — MUSHROOM STATE MAPPING — override state colours here
+  # ════════════════════════════════════════════════════════════
+
+  # Layer 2c — HA RGB bridge
+  # Update accent-color-rgb whenever accent-color changes (format: "R, G, B")
+  accent-color-rgb: "217, 190, 139"            # RGB of #D9BE8B (gold)
+  mush-rgb-primary: "var(--accent-color-rgb)"  # connects Mushroom to accent
+
+  # Layer 2b — entity-domain state mapping
+  # Simple domains
+  mush-rgb-state-fan:    "var(--mush-rgb-green)"
+  mush-rgb-state-light:  "var(--mush-rgb-orange)"
+  mush-rgb-state-entity: "var(--mush-rgb-blue)"
+  mush-rgb-state-switch: "var(--mush-rgb-blue)"
+
+  # Person presence
+  mush-rgb-state-person-home:     "var(--mush-rgb-success)"
+  mush-rgb-state-person-not-home: "var(--mush-rgb-danger)"
+  mush-rgb-state-person-zone:     "var(--mush-rgb-info)"
+  mush-rgb-state-person-unknown:  "var(--mush-rgb-grey)"
+
+  # Cover
+  mush-rgb-state-cover-open:   "var(--mush-rgb-blue)"
+  mush-rgb-state-cover-closed: "var(--mush-rgb-disabled)"
+
+  # Alarm
+  mush-rgb-state-alarm-disarmed:  "var(--mush-rgb-info)"
+  mush-rgb-state-alarm-armed:     "var(--mush-rgb-success)"
+  mush-rgb-state-alarm-triggered: "var(--mush-rgb-danger)"
+
+  # Climate HVAC modes
+  mush-rgb-state-climate-auto:      "var(--mush-rgb-green)"
+  mush-rgb-state-climate-cool:      "var(--mush-rgb-blue)"
+  mush-rgb-state-climate-dry:       "var(--mush-rgb-orange)"
+  mush-rgb-state-climate-fan-only:  "var(--mush-rgb-blue-grey)"
+  mush-rgb-state-climate-heat:      "var(--mush-rgb-deep-orange)"
+  mush-rgb-state-climate-heat-cool: "var(--mush-rgb-green)"
+  mush-rgb-state-climate-idle:      "var(--mush-rgb-grey)"
+  mush-rgb-state-climate-off:       "var(--mush-rgb-disabled)"
+
+  # Semantic aliases
+  mush-rgb-info:    "var(--mush-rgb-blue)"
+  mush-rgb-success: "var(--mush-rgb-green)"
+  mush-rgb-warning: "var(--mush-rgb-orange)"
+  mush-rgb-danger:  "var(--mush-rgb-red)"
+
+  # Layer 2a structure — wire geometry to HA card variables
+  mush-control-border-radius: "var(--ha-card-border-radius, 16px)"
+  mush-chip-background:       "var(--ha-card-background, white)"
+  mush-chip-border-radius:    "calc(var(--ha-card-border-radius, 16px) + 4px)"
+  mush-chip-border-color:     "var(--ha-card-border-color, var(--divider-color))"
+  mush-chip-border-width:     "var(--ha-card-border-width, 1px)"
+  mush-card-primary-color:    "var(--primary-text-color)"
+  mush-card-secondary-color:  "var(--secondary-text-color)"
+  mush-title-color:           "var(--primary-text-color)"
+  mush-subtitle-color:        "var(--secondary-text-color)"
+
+  # ────────────────────────────────────────────────────────--
+  # LIGHT MODE
+  # ────────────────────────────────────────────────────────--
+  modes:
+    light:
+
+      # ── Typography ────────────────────────────────────────
+      primary-font-family: "Alexandria, sans-serif"
+
+      # ZONE 3 — TEXT (light) — only change if background shifts significantly
+      text-color:                       "#555A60"
+      text-color-rgb:                   "85, 90, 96"
+      primary-text-color:               "var(--text-color)"
+      primary-text-color--half-opacity: "rgba(85,90,96,0.5)"
+      primary-text-color--light:        "#d7d8d9"
+      text-primary-color:               "var(--text-color)"
+      secondary-text-color:             "rgba(37,43,56,0.3)"
+      text-medium-color:                "#80828A"
+      disabled-text-color:              "#626569"
+
+      # ZONE 1 — ACCENT LEVER (light) — swap these 8 lines for new accent ──
+      # primary-color points to accent-color (as in Casa5)
+      accent-color:         "#D9BE8B"
+      primary-color:        "var(--accent-color)"
+      warning-color:        "#FA7575"
+
+      # Accent colour opacity scale (from Casa5) — used for
+      # bubble-button-accent-color and sub-button styling
+      accent-color-background-opacity: "rgba(217,190,139,0.25)"
+      accent-medium-color:             "rgba(217,190,139,0.5)"
+      ha-color-primary-30:             "rgba(217,190,139,0.85)"
+      ha-color-primary-40:             "var(--accent-color)"
+      ha-color-primary-80:             "rgba(217,190,139,0.35)"
+      ha-color-primary-90:             "rgba(217,190,139,0.25)"
+      ha-color-primary-95:             "rgba(217,190,139,0.15)"
+
+      # ── State colours ─────────────────────────────────────
+      # state-inactive-color → bubble-icon-background-color
+      state-active-color:   "var(--accent-color)"
+      state-inactive-color: "rgba(0,0,0,0.08)"
+
+      # ZONE 2 — BACKGROUNDS (light) — swap for full palette ─────────────
+      # ha-card-background → bubble-main-background-color
+      # lovelace-background → .is-on bubble-icon-background-color
+      background-color:           "#F8F8F8"
+      background:                 "var(--background-color)"
+      lovelace-background:        "var(--background-color)"
+      primary-background-color:   "var(--background-color)"
+      secondary-background-color: "rgb(230,230,230)"
+      card-background-color:      "#FFFFFF"
+      ha-card-background:         "#FFFFFF"
+      background-color-2:         "#E8E8E8"
+      markdown-code-background-color: "var(--background-color)"
+      welcome-card-background:    "rgba(255,255,255,0.75)"
+
+      # ── Card selection states (from Casa5) ────────────────
+      ha-card-background-selected:          "var(--ha-card-background)"
+      ha-card-background-unselected:        "var(--background-color)"
+      ha-card-background-unselected-border: "var(--ha-card-background)"
+
+      # ── Borders & shadows ─────────────────────────────────
+      # divider-color is fallback in bubble-border
+      # ha-card-box-shadow → .bubble-container
+      divider-color:        "rgba(0,0,0,0.08)"
+      ha-card-border-color: "rgba(0,0,0,0.06)"
+      ha-card-box-shadow:   "0px 0px 0px 0px rgba(0,0,0,0)"
+
+      # ZONE 4 — SIDEBAR (light) ─────────────────────────────────────────
+      sidebar-background-color:          "#F8F8F8"
+      sidebar-icon-color:                "rgb(95,99,104)"
+      sidebar-text-color:                "var(--sidebar-icon-color)"
+      sidebar-selected-background-color: "var(--primary-background-color)"
+      sidebar-selected-bg:               "var(--accent-color)"
+      sidebar-selected-icon-color:       "var(--accent-color)"
+      sidebar-selected-text-color:       "var(--sidebar-selected-icon-color)"
+
+      # ── App header ────────────────────────────────────────
+      app-header-background-color:      "#F8F8F8"
+      app-header-text-color:            "rgb(95,99,104)"
+      app-header-edit-background-color: "#555A60"
+
+      # ── Input fields ──────────────────────────────────────
+      input-fill-color:                  "#F8F8F8"
+      input-ink-color:                   "var(--text-color)"
+      input-label-ink-color:             "var(--primary-text-color--light)"
+      input-idle-line-color:             "rgba(0,0,0,0.24)"
+      input-hover-line-color:            "rgba(0,0,0,0.42)"
+      input-disabled-fill-color:         "#f5f5f5"
+      input-outlined-idle-border-color:  "rgba(0,0,0,0.38)"
+      input-outlined-hover-border-color: "rgba(0,0,0,0.87)"
+      input-dropdown-icon-color:         "var(--primary-text-color--half-opacity)"
+      paper-input-container-focus-color: "var(--accent-color)"
+
+      # ── Toggles & MDC (from Casa5) ────────────────────────
+      mdc-theme-primary:                         "var(--accent-color)"
+      paper-toggle-button-checked-button-color:  "var(--switch-checked-button-color)"
+      paper-toggle-button-checked-bar-color:     "var(--switch-checked-track-color)"
+      paper-toggle-button-unchecked-button-color: "var(--switch-unchecked-button-color)"
+      paper-toggle-button-unchecked-bar-color:   "var(--switch-unchecked-track-color)"
+      paper-radio-button-checked-color:          "var(--accent-color)"
+
+      # ── Switches ──────────────────────────────────────────
+      switch-unchecked-color:        "#d7d8d9"
+      switch-checked-button-color:   "var(--accent-color)"
+      switch-unchecked-button-color: "var(--accent-medium-color)"
+      switch-unchecked-track-color:  "var(--background-color-2)"
+      switch-checked-track-color:    "var(--accent-color)"
+
+      # ── Sliders ───────────────────────────────────────────
+      paper-slider-knob-color:       "var(--accent-color)"
+      paper-slider-knob-start-color: "var(--paper-slider-knob-color)"
+      paper-slider-pin-color:        "var(--background-color-2)"
+      paper-slider-active-color:     "var(--accent-color)"
+      paper-slider-container-color:  "var(--background-color-2)"
+      paper-slider-secondary-color:  "var(--accent-medium-color)"
+
+      # ZONE 5 — DIALOG TINT (light) ─────────────────────────────────────
+      more-info-header-background:    "#f0ece3"
+      paper-dialog-background-color:  "var(--card-background-color)"
+      paper-card-background-color:    "var(--card-background-color)"
+
+      # ── Tables ────────────────────────────────────────────
+      table-row-background-color:             "var(--ha-card-background)"
+      table-row-alternative-background-color: "var(--ha-card-background)"
+      data-table-background-color:            "var(--primary-background-color)"
+
+      # ── States & badges ───────────────────────────────────
+      state-icon-color:              "var(--accent-color)"
+      state-icon-active-color:       "rgb(95,99,104)"
+      state-icon-unavailable-color:  "var(--disabled-text-color)"
+      paper-item-icon-color:         "var(--primary-text-color--half-opacity)"
+      paper-item-icon-active-color:  "var(--accent-color)"
+
+      label-badge-background-color:  "rgb(248,250,249)"
+      label-badge-text-color:        "rgb(77,85,117)"
+      label-badge-red:               "#FA7575"
+      label-badge-green:             "rgb(109,192,113)"
+      label-badge-blue:              "rgb(26,115,232)"
+      label-badge-yellow:            "rgb(217,183,87)"
+      label-badge-gray:              "rgb(95,98,103)"
+
+      # ── Dropdowns / Material (from Casa5) ─────────────────
+      material-background-color:           "var(--card-background-color)"
+      material-secondary-background-color: "var(--primary-background-color)"
+      mdc-theme-surface:                   "var(--card-background-color)"
+
+      # ── Mushroom Cards — Layer 2a base colours (light mode) ─
+      # These are the raw RGB values. State mapping is in the
+      # mode-independent block above. Change these to remap
+      # all states that reference a given colour.
+      mush-icon-border-radius: "50%"
+      mush-icon-size:          "54px"
+      mush-icon-symbol-size:   "0.5em"
+
+      # Layer 2a: palette (Casa5 overrides from official Mushroom noted)
+      mush-rgb-blue:         "37, 43, 56"    # Casa5 override: dark text (not true blue)
+      mush-rgb-red:          "244, 67, 54"
+      mush-rgb-pink:         "233, 30, 99"
+      mush-rgb-purple:       "156, 39, 176"
+      mush-rgb-deep-purple:  "103, 58, 183"
+      mush-rgb-indigo:       "63, 81, 181"
+      mush-rgb-light-blue:   "3, 169, 244"
+      mush-rgb-cyan:         "0, 188, 212"
+      mush-rgb-teal:         "0, 150, 136"
+      mush-rgb-green:        "76, 175, 80"
+      mush-rgb-light-green:  "139, 195, 74"
+      mush-rgb-lime:         "205, 220, 57"
+      mush-rgb-yellow:       "255, 235, 59"
+      mush-rgb-amber:        "255, 193, 7"
+      mush-rgb-orange:       "255, 152, 0"
+      mush-rgb-deep-orange:  "255, 87, 34"
+      mush-rgb-brown:        "121, 85, 72"
+      mush-rgb-light-grey:   "189, 189, 189"
+      mush-rgb-grey:         "158, 158, 158"
+      mush-rgb-dark-grey:    "96, 96, 96"
+      mush-rgb-blue-grey:    "96, 125, 139"
+      mush-rgb-black:        "0, 0, 0"
+      mush-rgb-white:        "255, 255, 255"
+
+      # Disabled — must be per-mode (different in light and dark)
+      mush-rgb-disabled:     "189, 189, 189"    # light grey (ZONE 6 light)
+
+      # ── Ripple (commented out — Casa5 disables it) ────────
+      # Uncomment for a flatter, no-ripple feel:
+      # mdc-ripple-color:           "transparent"
+      # mdc-ripple-hover-opacity:   "0"
+      # mdc-ripple-press-opacity:   "0"
+      # mdc-ripple-focus-opacity:   "0"
+      mdc-ripple-color: "rgba(217,190,139,0.20)"
+
+      # ── Mini Media Player (from Casa5 — optional) ─────────
+      mini-media-player-base-color:   "var(--text-color)"
+      mini-media-player-accent-color: "var(--accent-color)"
+
+      # ── MCG (mini-graph-card) ─────────────────────────────
+      mcg-title-font-weight: "700"
+
+      # ── Scrollbar ─────────────────────────────────────────
+      scrollbar-thumb-color: "rgba(0,0,0,0.15)"
+
+    # ────────────────────────────────────────────────────────
+    # DARK MODE
+    # ────────────────────────────────────────────────────────
+    dark:
+
+      # ── Typography ────────────────────────────────────────
+      primary-font-family: "Alexandria, sans-serif"
+
+      # ── Text aliases (from Casa5) ─────────────────────────
+      text-color:                       "#FFFFFF"
+      text-color-rgb:                   "255, 255, 255"
+      primary-text-color:               "var(--text-color)"
+      primary-text-color--half-opacity: "rgba(255,255,255,0.5)"
+      primary-text-color--light:        "#818793"
+      text-primary-color:               "var(--text-color)"
+      secondary-text-color:             "var(--primary-text-color--light)"
+      text-medium-color:                "#80828A"
+      disabled-text-color:              "#626569"
+
+      # ZONE 1 — ACCENT LEVER (dark) — swap these 8 lines for new accent ───
+      accent-color:         "#D9BE8B"
+      primary-color:        "var(--accent-color)"
+      warning-color:        "#FA7575"
+
+      # Accent colour opacity scale
+      accent-color-background-opacity: "rgba(217,190,139,0.25)"
+      accent-medium-color:             "var(--accent-color)"
+      ha-color-primary-30:             "rgba(217,190,139,0.85)"
+      ha-color-primary-40:             "var(--accent-color)"
+      ha-color-primary-80:             "rgba(217,190,139,0.35)"
+      ha-color-primary-90:             "rgba(217,190,139,0.25)"
+      ha-color-primary-95:             "rgba(217,190,139,0.15)"
+
+      # ── State colours ─────────────────────────────────────
+      state-active-color:   "var(--accent-color)"
+      state-inactive-color: "rgba(255,255,255,0.10)"
+
+      # ZONE 2 — BACKGROUNDS (dark) — swap for full palette ──────────────
+      background-color:           "#202631"
+      background:                 "var(--background-color)"
+      lovelace-background:        "var(--background-color)"
+      primary-background-color:   "var(--background-color)"
+      secondary-background-color: "var(--background-color)"
+      card-background-color:      "var(--ha-card-background)"
+      ha-card-background:         "#252B38"
+      background-color-2:         "#3a3c55"
+      markdown-code-background-color: "var(--background-color)"
+      welcome-card-background:    "rgba(255,255,255,0.1)"
+
+      # Card selection states
+      ha-card-background-selected:          "var(--ha-card-background)"
+      ha-card-background-unselected:        "var(--background-color)"
+      ha-card-background-unselected-border: "#2D3341"
+
+      # ── Borders & shadows ─────────────────────────────────
+      divider-color:        "var(--ha-card-background)"
+      ha-card-border-color: "#2D3341"
+      ha-card-box-shadow:   "0px 0px 0px 0px rgba(0,0,0,0)"
+
+      # ZONE 4 — SIDEBAR (dark) ──────────────────────────────────────────
+      sidebar-background-color:          "#212736"
+      sidebar-icon-color:                "#98a7b9"
+      sidebar-selected-icon-color:       "#FFFFFF"
+      sidebar-selected-text-color:       "var(--text-color)"
+      sidebar-selected-bg:               "var(--accent-color)"
+      light-primary-color:               "var(--ha-card-background)"
+
+      # ── App header ────────────────────────────────────────
+      app-header-background-color:      "#212736"
+      app-header-text-color:            "#FFFFFF"
+      app-header-edit-background-color: "#2A3040"
+
+      # ── Input fields ──────────────────────────────────────
+      input-fill-color:                  "var(--background-color)"
+      input-ink-color:                   "var(--text-color)"
+      input-label-ink-color:             "var(--primary-text-color--light)"
+      input-idle-line-color:             "rgba(255,255,255,0.24)"
+      input-hover-line-color:            "rgba(255,255,255,0.42)"
+      input-disabled-fill-color:         "#222222"
+      input-outlined-idle-border-color:  "rgba(255,255,255,0.38)"
+      input-outlined-hover-border-color: "rgba(255,255,255,0.87)"
+      input-dropdown-icon-color:         "var(--primary-text-color--half-opacity)"
+      paper-input-container-focus-color: "var(--accent-color)"
+
+      # ── Toggles & MDC (from Casa5) ────────────────────────
+      mdc-theme-primary:              "var(--accent-color)"
+      paper-toggle-button-checked-bar-color: "var(--accent-color)"
+      paper-radio-button-checked-color:      "var(--accent-color)"
+
+      # ── Switches ──────────────────────────────────────────
+      switch-unchecked-color:        "#70889e"
+      switch-checked-button-color:   "var(--accent-color)"
+      switch-unchecked-track-color:  "var(--background-color-2)"
+      switch-checked-track-color:    "var(--background-color-2)"
+
+      # ── Sliders ───────────────────────────────────────────
+      paper-slider-knob-color:      "var(--accent-color)"
+      paper-slider-pin-color:       "var(--background-color-2)"
+      paper-slider-active-color:    "var(--accent-color)"
+      paper-slider-container-color: "var(--background-color-2)"
+
+      # ZONE 5 — DIALOG TINT (dark) ──────────────────────────────────────
+      more-info-header-background:   "#132c41"
+      paper-dialog-background-color: "#132c41"
+
+      # ── Tables ────────────────────────────────────────────
+      table-row-background-color:             "var(--ha-card-background)"
+      table-row-alternative-background-color: "var(--ha-card-background)"
+
+      # ── States & badges ───────────────────────────────────
+      paper-item-icon-color:        "var(--primary-text-color--half-opacity)"
+      paper-item-icon-active-color: "var(--accent-color)"
+
+      label-badge-background-color: "var(--background-color)"
+      label-badge-text-color:       "var(--text-primary-color)"
+      label-badge-red:              "rgba(73,85,108,1)"
+      label-badge-blue:             "rgba(26,137,245,1)"
+      label-badge-green:            "rgba(0,202,139,1)"
+      label-badge-yellow:           "rgba(222,176,107,1)"
+
+      # ── Mushroom Cards — Layer 2a base colours (dark mode) ──
+      # Same palette as light mode. Only mush-rgb-disabled differs.
+      mush-icon-border-radius: "50%"
+      mush-icon-size:          "54px"
+      mush-icon-symbol-size:   "0.5em"
+
+      mush-rgb-blue:         "37, 43, 56"
+      mush-rgb-red:          "244, 67, 54"
+      mush-rgb-pink:         "233, 30, 99"
+      mush-rgb-purple:       "156, 39, 176"
+      mush-rgb-deep-purple:  "103, 58, 183"
+      mush-rgb-indigo:       "63, 81, 181"
+      mush-rgb-light-blue:   "3, 169, 244"
+      mush-rgb-cyan:         "0, 188, 212"
+      mush-rgb-teal:         "0, 150, 136"
+      mush-rgb-green:        "76, 175, 80"
+      mush-rgb-light-green:  "139, 195, 74"
+      mush-rgb-lime:         "205, 220, 57"
+      mush-rgb-yellow:       "255, 235, 59"
+      mush-rgb-amber:        "255, 193, 7"
+      mush-rgb-orange:       "255, 152, 0"
+      mush-rgb-deep-orange:  "255, 87, 34"
+      mush-rgb-brown:        "121, 85, 72"
+      mush-rgb-light-grey:   "189, 189, 189"
+      mush-rgb-grey:         "158, 158, 158"
+      mush-rgb-dark-grey:    "96, 96, 96"
+      mush-rgb-blue-grey:    "96, 125, 139"
+      mush-rgb-black:        "0, 0, 0"
+      mush-rgb-white:        "255, 255, 255"
+
+      # Disabled — darker in dark mode (ZONE 6 dark)
+      mush-rgb-disabled:     "111, 111, 111"
+
+      # ── Ripple (commented out — Casa5 disables it) ────────
+      # mdc-ripple-color:         "transparent"
+      # mdc-ripple-hover-opacity: "0"
+      # mdc-ripple-press-opacity: "0"
+      # mdc-ripple-focus-opacity: "0"
+      mdc-ripple-color: "rgba(217,190,139,0.20)"
+
+      # ── Mini Media Player ─────────────────────────────────
+      mini-media-player-base-color:   "var(--text-color)"
+      mini-media-player-accent-color: "var(--accent-color)"
+
+      # ── MCG ───────────────────────────────────────────────
+      mcg-title-font-weight: "700"
+
+      # ── Scrollbar ─────────────────────────────────────────
+      scrollbar-thumb-color: "rgba(255,255,255,0.15)"
