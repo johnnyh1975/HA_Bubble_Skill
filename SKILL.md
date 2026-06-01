@@ -1,58 +1,15 @@
 ---
 name: ha-bubble-dashboard
 description: >
-  Home Assistant dashboard and card design using Bubble Card 3.x, Bubble Card Tools,
-  Streamline Card, and Sidebar Card — anchored to the Casa5HeyneV2 merged
-  HA/Bubble Card theme architecture.
-
-  TRIGGER THIS SKILL WHEN:
-  - User asks to create, design, or improve a Lovelace dashboard or view
-  - User asks for help with Bubble Card (any card type: pop-up, button, media-player, climate, cover, select, separator, calendar, sub-buttons)
-  - User asks for a CSS theme, colour palette, or accent colour change for HA
-  - User asks to change or customise the dashboard font or typography
-  - User asks to create or modify a Streamline Card template
-  - User asks to configure Sidebar Card or dashboard navigation
-  - User asks why their Bubble Card theme/colour is not reflecting the HA theme
-  - User asks to create a room pop-up, footer nav, or control panel
-  - User asks for dashboard UX advice or layout recommendations
-  - User asks about wall-panel, kiosk, or fixed-display dashboard setup
-  - Troubleshooting: pop-up not opening, theme not applying, Streamline template
-    not found, sidebar not showing, card styling being ignored, font not loading
-
-  SYMPTOMS — Claude is going wrong without this skill when it:
-  - Hardcodes hex colours directly in Bubble Card YAML instead of using var() chains
-  - Generates a pop-up using the pre-v3.2 format (separate stack + pop-up card) instead of the v3.2+ standalone format with a cards: block
-  - Places a pop-up or HBS footer inside sections: instead of as a top-level view card
-  - Generates a pop-up inside a horizontal-stack or vertical-stack
-  - Uses the deprecated bubble-pop-up-fix.js script or references it
-  - Generates Streamline Card YAML using !include_dir_named without first asking whether the user is in UI-mode or YAML-mode Lovelace
-  - Does not remind the user to clear browser cache and restart HA after adding Streamline templates
-  - References subButtonIcon[0] for a main sub-button without accounting for v3.1+ index reordering (bottom sub-buttons are indexed first)
-  - Applies the --bubble-accent-color variable directly with a hex value instead of pointing it to var(--accent-color)
-  - Tells the user to install Bubble Card Tools and apply the HA default styling module as a mandatory setup step (it is optional)
-  - Recommends card-mod for styling Bubble Cards (Bubble Card has its own styles: system)
-  - Generates automations, helpers, or template sensors — those belong to ha-yaml and ha-best-practices skills
-  - Uses a plain button card for fan, vacuum, lock, alarm, or camera entities without checking entity-domain-map
-  - Reconstructs a theme YAML from scratch instead of using references/casa5heynev2-template.yaml as the base
-  - Uses masonry view type instead of sections for new dashboards
-  - Generates both light and dark mode without first asking whether the user has a fixed-display (wall panel / kiosk)
-  - Delivers a font change without providing the JS loader file and configuration.yaml change
-  - Tells the user a font change only requires theme variable updates (it also requires the JS loader and HA restart)
-
-  OUT OF SCOPE — do not use this skill for:
-  - HA automations, scripts, blueprints, or helpers → use ha-yaml
-  - Template sensors or binary sensor helpers → use ha-yaml
-  - Custom integration development → use ha-integration-dev
-  - ESPHome firmware → use esphome skill
-  - Mushroom Cards (not part of this stack)
-
-  PAIRS WITH:
-  - ha-yaml: automations triggered from dashboard buttons
-  - ha-best-practices: entity naming, helper selection feeding dashboard cards
+  Home Assistant dashboard design with Bubble Card 3.x, Streamline Card, Sidebar Card and Mushroom — including a merged HA/Bubble/Mushroom CSS theme with colour intelligence, palette recipes, WCAG checks, typography, wall-panel support and full troubleshooting.
+  
+  TRIGGERS: Bubble Card (any card type), Lovelace dashboards, CSS themes, colour palettes, fonts, Streamline templates, Sidebar Card nav, Mushroom chips, room pop-ups, wall panels, troubleshooting.
+  
+  SYMPTOMS: hardcodes hex in YAML · uses pre-v3.2 pop-up format · places pop-up or HBS inside sections: · generates themes from scratch · uses masonry view · skips UI-mode question for Streamline · omits JS font loader · generates automations instead of navigate actions.
 
 metadata:
   version: 1
-  bubble_card: "3.2.2"
+  bubble_card: "3.2.1"   # 3.2.2 is a patch on top; 3.2.1 is the stable base
   streamline_card: "0.2.2"
   sidebar_card: "0.1.9.9"
   bubble_card_tools: "1.0.2"
@@ -144,10 +101,11 @@ Generate → checklist (§8) → deliver
 | "I'll use card-mod to style this Bubble Card" | AVOID. Use styles: in the card YAML or a Bubble Card module instead. |
 | "subButtonIcon[0] is the first main sub-button" | WRONG since v3.1. Bottom sub-buttons are indexed first. Main sub-buttons come after. |
 | "I'll use !include_dir_named for Streamline templates" | ASK FIRST. Only works in YAML-mode Lovelace. UI-mode users get a parse error. |
-| "The template is added, let's move on" | STOP. Remind the user to hard-refresh the browser and restart HA after adding Streamline templates — without this the template won't load. |
+| "The template is added, let's move on" | NOTE. Streamline revalidates templates in the background after the first page load — most edits propagate automatically. If a template doesn't appear, hard-refresh first. HA restart only if the Streamline card resource is missing entirely. |
 | "The HA default styling module is required" | NO. It is optional. The skill outputs a merged theme file that handles Bubble ↔ HA alignment. |
 | "I'll hardcode the card background in the card YAML" | WRONG. All colours flow from the theme file via var() chains. |
 | "Sidebar Card has no issues on HA 2026" | CAUTION. bottomCard has an intermittent setConfig bug. showTopMenuOnMobile behaviour changed in HA 2026.1. Test after install. |
+| "Clicking a button inside pop-up A should open pop-up B directly" | CHANGED in v3.2.x. Navigating from one open pop-up to another now closes the first pop-up — a second tap is required to open the next. Workaround: add a dismiss button to each pop-up, or use `close_by_clicking_outside: false` to prevent accidental dismissal while navigating. |
 | "I swapped the accent, Bubble Card updated but Mushroom is still blue" | EXPECTED without ZONE 6 update. Set `accent-color-rgb: "NR,NG,NB"` in the mode-independent block so `mush-rgb-primary` picks up the new accent. |
 | "I'll generate both light and dark mode for this wall panel" | ASK FIRST. Fixed-display setups (wall panels, kiosks) need single-mode themes. Generating both wastes maintenance surface and risks accidental mode switching. |
 | "I'll just update the font variables in the theme" | INCOMPLETE. Font changes also require a JS loader file at /config/www/ and an extra_module_url entry in configuration.yaml. Theme variables alone have no effect without the loader. |
@@ -170,7 +128,7 @@ Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 `#architecture`★ · `#loading-methods` · `#ha-variables` · `#size-system` · `#alexandria` · `#swap-recipes` · `#single-mode-themes` · `#font-troubleshooting`
 
 **streamline-ref.md** — Streamline templates:
-`#ui-mode-vs-yaml-mode`★ · `#template-anatomy` · `#variable-syntax` · `#javascript-keys` · `#dry-decision` · `#file-organisation` · `#known-limitations` · `#bubble-card-interaction`
+`#ui-mode-vs-yaml-mode`★ · `#template-anatomy` · `#variable-syntax` · `#javascript-keys` · `#dry-decision` · `#file-organisation` (incl. `!include` tag + background revalidation) · `#known-limitations` · `#bubble-card-interaction`
 
 **sidebar-ref.md** — Sidebar Card config:
 `#known-issues`★ · `#installation` · `#main-options` · `#width-breakpoints` · `#sidebar-menu` · `#template-messages` · `#style` · `#bottom-card` · `#combined-example`
@@ -186,7 +144,7 @@ Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 **test-dashboard.yaml** — complete importable dashboard assembling Recipes 0–5. Use to verify YAML validity after recipe changes, or as a starter dashboard for users.
 
 **troubleshooting-ref.md** — when something is broken:
-`#cache-issues`★ · `#theme-not-applying` · `#popup-not-opening` · `#streamline-not-found` · `#sidebar-not-showing` · `#bubble-styling-ignored` · `#version-migration` · `#hbs-not-ordering` · `#sections-layout-issues` · `#sub-buttons-not-showing` · `#card-state-stale` · `#font-not-loading` · `#popup-z-index` · `#general-diagnostic-checklist`★
+`#cache-issues`★ · `#theme-not-applying` · `#popup-not-opening` · `#streamline-not-found` · `#sidebar-not-showing` · `#bubble-styling-ignored` · `#version-migration` · `#hbs-not-ordering` · `#sections-layout-issues` · `#sub-buttons-not-showing` · `#card-state-stale` · `#font-not-loading` · `#popup-z-index` · `#cardmod-overflow-clipping` · `#general-diagnostic-checklist`★
 
 **recipes-extended.md** — room-specific patterns:
 `#security-popup` · `#energy-view` · `#vacuum-popup` · `#presence-panel` · `#bathroom-popup` · `#garage-popup` · `#office-popup` · `#streamline-templates-extended`
@@ -1515,6 +1473,10 @@ That table covers the most frequent failure modes in one place.
 
 - Pop-up content renders lazily — do not put always-on live sensors in pop-ups
   expecting them to update in the background. They update on pop-up open.
+  **v3.2.1 improvement:** cards outside the visible area of a pop-up now update
+  more intelligently by default. Manual `background_update: true` is no longer
+  required in most cases — remove it from cards if you added it in earlier versions,
+  as it may now cause redundant updates.
 - `cover_background: true` on media-player cards fetches album art on every
   state change — avoid using it on dashboards with many simultaneous media
   players.

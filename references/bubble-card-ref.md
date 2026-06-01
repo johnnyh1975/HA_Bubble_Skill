@@ -86,7 +86,7 @@ button_action:
 | `icon` | string | entity icon | MDI icon for header |
 | `entity` | string | — | Optional entity — colours header by state |
 | `popup_style` | string | `bubble` | `bubble` or `classic` |
-| `popup_mode` | string | `default` | `default` / `fit-content` / `centered` / `adaptive-dialog` |
+| `popup_mode` | string | `default` | `default` / `fit-content` / `centered` / `adaptive-dialog` / `adaptive-dialog` |
 | `with_bottom_offset` | boolean | false | Add bottom offset — set true when HBS footer is present |
 | `full_width_on_mobile` | boolean | false | Expand to full width on mobile (use with `centered` mode) |
 | `width_desktop` | string | `100%` | Width on desktop, e.g. `560px` |
@@ -107,6 +107,84 @@ button_action:
 | `buttons_position` | string | `right` | `right` or `left` for header buttons |
 | `cards` | list | — | Content cards (any Bubble Card or HA card type) |
 | `open_action` | object | — | Action triggered when pop-up opens |
+| `close_action` | object | — | Action triggered when pop-up closes |
+| `sub_button` | object | — | Sub-buttons on the pop-up header. **v3.2.1+:** pop-up automatically shows header when sub-buttons are configured. Same `main`/`bottom` schema as button cards. |
+
+**Visual style options:**
+
+| Option | Default | Values | Notes |
+|--------|---------|--------|-------|
+| `popup_style` | `bubble` | `bubble` / `classic` | `classic` gives a traditional dialog header with title bar appearance |
+| `bg_color` | theme bg | any CSS colour | Custom pop-up background colour — use `var(--ha-card-background)` to match cards |
+| `bg_opacity` | `88` | 0–100 | Pop-up background opacity — 88 = slightly transparent by default, not 100 |
+| `bg_blur` | `10` | 0–100 | Blur applied to the pop-up background |
+| `backdrop_blur` | `0` | 0–100 | Blur applied to the backdrop behind the pop-up (separate from `bg_blur`) |
+| `shadow_opacity` | `0` | 0–100 | Drop shadow under the pop-up |
+| `hide_backdrop` | `false` | bool | Hides the dark overlay entirely (requires page refresh) |
+| `margin` | `7px` | CSS value | Centering correction for some themes (e.g. `13px`) |
+| `margin_top_mobile` | `0px` | CSS value | Top offset on mobile — use `-56px` if your header is hidden |
+| `margin_top_desktop` | `0px` | CSS value | Top offset on desktop — use `50vh` for a half-screen pop-up |
+| `width_desktop` | `540px` | CSS value | Width on desktop — mobile is always full width |
+
+**Header controls (all new in v3.2.0):**
+
+| Option | Default | Notes |
+|--------|---------|-------|
+| `show_header` | `true` | Set `false` to hide the entire header including close/back buttons. Close via long swipe or click outside. |
+| `show_close_button` | `true` | Hide the X button while keeping the rest of the header |
+| `show_previous_button` | `false` | Show a back/previous button (←) in the header |
+| `buttons_position` | `right` | `right` / `left` — position of the header action buttons |
+
+**Behaviour options:**
+
+| Option | Default | Notes |
+|--------|---------|-------|
+| `close_by_clicking_outside` | `true` | Set `false` to prevent closing when clicking the backdrop. Requires page refresh after change. |
+| `close_on_click` | `false` | Close the pop-up after ANY tap or click inside it |
+| `auto_close` | — | Milliseconds until auto-close (e.g. `15000` for 15s) |
+| `slide_to_close_distance` | `400` | Pixel distance of a downward swipe to close (increase to make harder to dismiss accidentally) |
+| `background_update` | `false` | Force cards to update even when pop-up is closed. **Not recommended** — v3.2.1 does intelligent lazy updates by default. Only enable if specific cards don't refresh on open. |
+| `performance_mode` | `default` | `default` / `performance` — `performance` slightly delays content rendering and disables backdrop blur for older/slower devices |
+| `trigger_close` | `true` | Whether to close the pop-up when trigger conditions are no longer met |
+| `main_buttons_position` | `default` | Position of sub-buttons on the pop-up header: `default` (right side of header) / `bottom` (below header as a row) |
+| `main_buttons_alignment` | `end` | Alignment when `main_buttons_position: bottom`: `start` / `center` / `end` |
+| `main_buttons_full_width` | auto | Whether header sub-buttons span full width. Defaults to `true` when position is `bottom`. |
+
+**Trigger (auto-open) options:**
+
+| Option | Notes |
+|--------|-------|
+| `trigger` | Array of HA conditions (same format as Lovelace conditional card). Pop-up opens when ALL conditions pass. |
+| `trigger_close` | `true` — close when conditions stop being met. Set `false` to keep open. |
+
+```yaml
+# Example: open security pop-up when motion detected
+trigger:
+  - condition: state
+    entity: binary_sensor.front_door_motion
+    state: "on"
+trigger_close: true
+```
+
+**Legacy trigger (deprecated, still works):**
+`trigger_entity:` + `trigger_state:` — the old way to auto-open. Use `trigger:` conditions array instead.
+
+**popup_mode — when to use each:**
+
+| Mode | Behaviour | Use when |
+|------|-----------|----------|
+| `default` | Full-height bottom sheet — slides up from the bottom | Room controls, long content lists |
+| `fit-content` | Shrinks to content height — slides up from bottom | Short pop-ups with 1–4 cards |
+| `centered` | Centered dialog — appears in the middle of the screen | Confirmations, settings, secondary views |
+| `adaptive-dialog` | Centered on desktop, bottom sheet on mobile | Mixed device usage — best of both modes |
+
+**empty-column card_type:**
+A blank placeholder card (`card_type: empty-column`) that fills a grid column without displaying content.
+Useful for alignment in sections grids when you need an empty slot.
+```yaml
+type: custom:bubble-card
+card_type: empty-column
+```
 | `close_action` | object | — | Action triggered when pop-up closes |
 
 ### Pop-up CSS variables
@@ -221,6 +299,7 @@ card_layout: large
 | `attribute` | string | — | Attribute to show (requires `show_attribute: true`) |
 | `show_last_changed` | boolean | false | Show last changed time |
 | `card_layout` | string | `normal` | `normal` / `large` / `large-2-rows` / `large-sub-buttons-grid` |
+| `rows` | number | auto | Override the card's height as a multiplier of the base row height. Values like `1.4` give 40% more height than the default. Useful for fine-tuning spacing when `card_layout: large` is too tall and `normal` is too short, or when sub-buttons need extra vertical room. Decimal values accepted. |
 | `rows` | number | — | Height in section view rows |
 | `force_icon` | boolean | false | Prefer icon over entity picture |
 | `use_accent_color` | boolean | false | Use theme accent instead of light colour (lights only) |
@@ -626,6 +705,18 @@ sub_button:
 | Separator line | `--bubble-line-` | `background-color` |
 | Footer | `--bubble-footer-` | `width`, `bottom`, `box-shadow` |
 
+**Sub-button text and content selectors:**
+```css
+/* Font size for main sub-button labels */
+.bubble-sub-button { font-size: 16px !important; }
+
+/* Font size specifically for bottom sub-buttons */
+.bubble-sub-button-bottom-container .bubble-sub-button { font-size: 12px !important; }
+
+/* Sub-button icon size */
+.bubble-sub-button .bubble-icon { --mdc-icon-size: 18px !important; }
+```
+
 **Targeting sub-buttons by position or name:**
 ```css
 .bubble-sub-button-1 { }          /* first sub-button by DOM index */
@@ -748,6 +839,32 @@ my_module_id:
 **The "HA default styling" module** (from Module Store) applies HA theme styling
 to Bubble Cards automatically. It is optional — the Casa5HeyneV2 theme handles
 the same alignment via the var() chain without needing this module.
+
+### Patreon modules (community/paid)
+
+Beyond the free Module Store, Clooos and community members publish additional
+modules via Patreon that extend Bubble Card significantly. As of v3.2.1 the
+official Patreon modules from Clooos include:
+
+| Module | What it does |
+|--------|-------------|
+| Bubble Badges v2 | Unlimited icon badges on any sub-button or the main card icon |
+| Bubble Weather | Animated weather backgrounds with daily/hourly forecast overlays |
+| Bubble Calendar Enhanced | Date/time display on buttons and calendar cards, configurable layout |
+| Bubble Neon | Dynamic theme assigning unique vibrant colours to each card automatically |
+| Custom Dropdown | Full control over labels, icons, and actions on select cards and sub-buttons |
+
+Patreon: **https://www.patreon.com/Clooos**
+
+**Skill note:** These modules are not documented in this skill — their API may
+change between releases and is not publicly versioned. When a user has a Patreon
+module installed, acknowledge it exists and advise them to check the module's
+own Patreon post for the YAML reference. Do not attempt to generate configuration
+for undocumented Patreon module options.
+
+Community-created modules (including Bubble Graph Pro for mini-graph-card integration
+by Cedynamix) are shared in the GitHub Discussions section and on Patreon:
+https://github.com/Clooos/Bubble-Card/discussions/categories/share-your-custom-styles-templates-and-dashboards
 
 ---
 

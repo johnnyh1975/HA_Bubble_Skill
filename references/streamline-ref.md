@@ -145,10 +145,38 @@ my_template:
 
 | Variable | Description |
 |----------|-------------|
-| `states` | All HA entity states object |
-| `user` | Current user object (`user.name`, `user.is_admin`) |
-| `variables` | All template variables as an object |
-| `areas` | All HA areas (`areas.kitchen.icon`) |
+| `states` | All HA entity states object — `states['sensor.temp'].state` |
+| `user` | Current user object — `user.name`, `user.is_admin` |
+| `variables` | All template variables as an object — `variables.entity` |
+| `areas` | HA area registry — `areas` is an object keyed by area ID with `name`, `icon`, and `aliases`. Example: `Object.values(areas).filter(a => a.name === 'Kitchen')[0]` |
+
+**`areas` usage examples:**
+
+```yaml
+# Show which area an entity belongs to
+styles_javascript: |
+  const entity = states['[[entity]]'];
+  const areaId = entity.area_id;
+  const area = areaId ? areas[areaId] : null;
+  return `.bubble-name::after { content: " (${area?.name ?? 'unassigned'})"; }`;
+
+# Generate cards for all entities in a named area
+area_lights_template:
+  card:
+    type: grid
+    columns: 2
+    cards_javascript: |
+      const targetArea = Object.values(areas).find(a => a.name === '[[area_name]]');
+      if (!targetArea) return [];
+      return Object.entries(states)
+        .filter(([id, s]) => s.area_id === targetArea.area_id && id.startsWith('light.'))
+        .map(([entity]) => ({
+          type: 'custom:bubble-card',
+          card_type: 'button',
+          button_type: 'slider',
+          entity
+        }));
+```
 
 **`cards_javascript` — dynamic card arrays:**
 
@@ -284,13 +312,56 @@ sensor_chip_template:
 ```
 
 **After editing the file:**
-1. Clear browser cache (hard refresh: Ctrl+Shift+R / Cmd+Shift+R)
-2. Restart Home Assistant (or reload Lovelace resources)
-3. New templates appear automatically — no dashboard edit needed
+1. Clear browser cache (hard refresh: Ctrl+Shift+R / Cmd+Shift+R) on first setup
+2. **After the first visit, Streamline revalidates templates in the background
+   automatically** — changes often propagate without a hard refresh. If templates
+   don't update, hard refresh is the fallback. HA restart is only required if
+   the card itself can't be found (resource not registered).
+
+### `!include` tag — splitting templates across files (UI-mode and YAML-mode)
+
+Streamline's `!include` tag loads an external YAML file relative to the current
+file's URL. This works in **both UI-mode and YAML-mode** — it is processed by
+Streamline itself, not by HA's YAML parser (unlike `!include_dir_named` which
+is HA-only and requires YAML-mode).
+
+```yaml
+# streamline_templates.yaml — main file
+# Use !include to load templates from separate files
+
+lights: !include templates/lights.yaml
+covers: !include templates/covers.yaml
+climate: !include templates/climate.yaml
+sensor_chips: !include templates/sensors.yaml
+```
+
+```
+/config/www/community/streamline-card/
+  streamline_templates.yaml      ← main file with !include tags
+  templates/
+    lights.yaml                  ← light-specific templates
+    covers.yaml
+    climate.yaml
+    sensors.yaml
+```
+
+**`!include` vs `!include_dir_named`:**
+
+| Feature | `!include` (Streamline) | `!include_dir_named` (HA YAML) |
+|---------|------------------------|-------------------------------|
+| Works in UI-mode | ✓ Yes | ✗ No |
+| Works in YAML-mode | ✓ Yes | ✓ Yes |
+| Processes by | Streamline Card | Home Assistant |
+| Path is relative to | Current YAML file | config directory |
+| Supports nested includes | ✓ Yes | Limited |
+
+**When to use `!include`:** UI-mode users with large template libraries who
+want to split templates across multiple files without switching to YAML-mode.
+This is the recommended approach for libraries beyond ~20 templates.
 
 ### Template file organisation (YAML-mode)
 
-Split by domain using `!include`:
+Split by domain using HA's native `!include_dir_named`:
 
 ```yaml
 # ui-lovelace.yaml or dashboard file
@@ -312,10 +383,13 @@ streamline_templates:
 - **UI editor templates not accessible from auto-load file.** Templates in
   `streamline_templates.yaml` are loaded for card rendering but not shown in
   the HA dashboard editor template picker.
-- **Browser cache must be cleared** after adding new templates. Failure to do
-  so results in "template not found" errors.
-- **`!include_dir_named` requires YAML-mode.** UI-mode users must use the
-  single auto-load file.
+- **Background revalidation covers most template changes** — a hard refresh
+  is usually not needed after editing templates. If a template does not update,
+  hard refresh first; HA restart only if the card resource itself is missing.
+- **`!include_dir_named` requires YAML-mode.** UI-mode users must use Streamline's
+  own `!include` tag or the single auto-load file.
+- **`!include` paths are URL-relative** to the YAML file they appear in, not
+  to the HA config directory. This differs from HA's `!include` behaviour.
 
 ---
 

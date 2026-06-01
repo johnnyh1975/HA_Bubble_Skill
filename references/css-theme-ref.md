@@ -85,6 +85,7 @@ These shape geometry and are not colour-sensitive:
 | `--mdc-shape-small` | `8px` | MDC chip / input radius |
 | `--mdc-shape-medium` | `12px` | MDC dialog / menu radius |
 | `--mdc-icon-size` | `22px` | Global icon size |
+| `ha-view-sections-row-gap` | HA default | Gap between section rows. **Increased in HA 2026.4.** Override: `ha-view-sections-row-gap: "4px"` in theme, or per-view: `theme_options: {ha-view-sections-row-gap: 4px}` in raw config. |
 
 ---
 

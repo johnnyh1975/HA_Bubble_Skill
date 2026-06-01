@@ -25,7 +25,7 @@ This skill teaches Claude to generate complete, production-quality Lovelace YAML
 ## File structure
 
 ```
-HA_Bubble_Skill/
+ha-bubble-dashboard/
 ├── README.md                           ← you are here
 ├── SKILL.md                            ← main skill file (iron laws, process, §§1–8)
 ├── CHANGELOG.md                        ← version history and update triggers
@@ -56,7 +56,7 @@ HA_Bubble_Skill/
 
 For setups where Claude has file system access (Claude computer-use tool, Claude Code, or custom integrations):
 
-1. Copy the `HA_Bubble_Skill/` folder to `/mnt/skills/user/HA_Bubble_Skill/`
+1. Copy the `ha-bubble-dashboard/` folder to `/mnt/skills/user/ha-bubble-dashboard/`
 2. Paste the contents of `available-skills-entry.md` into the `<available_skills>` block of your Claude system prompt
 3. Claude will load the skill automatically when it detects a relevant request
 
@@ -134,7 +134,7 @@ The skill includes a full colour intelligence layer:
 ## Version
 
 Current: **v1.5**  
-Component pins: Bubble Card 3.2.2 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0
+Component pins: Bubble Card 3.2.1 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0
 
 See `CHANGELOG.md` for full version history and update triggers.
 

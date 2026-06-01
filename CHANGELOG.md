@@ -2,6 +2,41 @@
 
 ---
 
+## v1.6 — 2026-05-30
+
+### Community forum findings — Bubble Card thread pages 151–153
+
+- `bubble-card-ref.md#version-compat` — version pin corrected to 3.2.1 (stable
+  release confirmed in forum). HA 2026.4 and 2026.5 compatibility notes added:
+  2026.4 changed section row gaps (ha-view-sections-row-gap); 2026.5 broke visual
+  editor fields (fixed in Bubble Card v3.2.1+).
+- `bubble-card-ref.md` — `rows:` key documented in button options table. Decimal
+  values (e.g. `rows: 1.4`) allow fine-grained card height control between
+  card_layout presets.
+- `bubble-card-ref.md#pop-up` — `sub_button:` added to pop-up options table.
+  v3.2.1 automatically shows pop-up header when sub-buttons are configured.
+- `bubble-card-ref.md#css-variables` — sub-button font size CSS selectors
+  documented: `.bubble-sub-button` and `.bubble-sub-button-bottom-container
+  .bubble-sub-button` for per-row font size control.
+- `bubble-card-ref.md#modules` — Patreon modules section added: Bubble Badges v2,
+  Bubble Weather, Bubble Calendar Enhanced, Bubble Neon, Custom Dropdown. Guidance
+  on how to handle Patreon modules in the skill (acknowledge, do not generate).
+  Community module pointer (Bubble Graph Pro, GitHub Discussions).
+- `css-theme-ref.md` — `ha-view-sections-row-gap` added to structural variables
+  table with HA 2026.4 change note and override pattern.
+- `troubleshooting-ref.md#sections-layout-issues` — section row gap row added for
+  HA 2026.4 ha-view-sections-row-gap change.
+- `troubleshooting-ref.md#popup-not-opening` — two-tap pop-up navigation row
+  added (v3.2.x behaviour change), card-mod overflow clipping pointer added.
+- `troubleshooting-ref.md#cardmod-overflow-clipping` — new symptom section for
+  card border-radius/box-shadow clipping inside pop-ups caused by global card-mod
+  `overflow: hidden` rules. CSS workaround and Bubble Card module alternative.
+- `SKILL.md Common Pitfalls` — two-tap pop-up navigation pitfall row added.
+- `SKILL.md §8 Performance notes` — background_update note updated for v3.2.1:
+  intelligent lazy loading now default; manual background_update: true no longer
+  needed and may cause redundant updates.
+
+---
 ## v1.5 — 2026-05-29
 
 ### Fixed

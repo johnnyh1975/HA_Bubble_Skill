@@ -731,3 +731,102 @@ chips:
 Named CSS colours (`red`, `green`, `blue`, `orange`, `grey`, `amber`, `teal`),
 hex values (`#D9BE8B`), or CSS variables (`var(--accent-color)`).
 Mushroom resolves named colours to its `mush-rgb-*` palette internally.
+
+---
+
+## #mushroom-cards-overview
+
+### When to use Mushroom Cards vs Bubble Cards
+
+Both can control the same entities. The choice comes down to layout philosophy:
+
+| Scenario | Use | Reason |
+|----------|-----|--------|
+| Room pop-up control panel | **Bubble Card** | Full-width sliders, sub-buttons, cover cards — Bubble is designed for this |
+| Glanceable status row (chip bar) | **Mushroom chip card** | Compact horizontal chips — Bubble has no equivalent |
+| Dashboard room navigation button | **Bubble Card button** | Supports PIR sensor ordering, HBS integration |
+| Quick entity state at a glance | **Mushroom entity card** | Smaller footprint than Bubble button |
+| Light with colour wheel | **Mushroom light card** | Full HSL/RGB colour picker — Bubble sliders do brightness/temp/hue separately |
+| Person/presence display | **Either** | Mushroom person card has photo support; Bubble button shows state only |
+| Inside a pop-up as a content card | **Bubble Card** | Native inside Bubble pop-ups; Mushroom cards work but have no Bubble-specific sub-buttons |
+
+### Mushroom entity card — most common alongside Bubble Card
+
+```yaml
+type: custom:mushroom-entity-card
+entity: light.living_room
+name: Living Room Light          # optional — defaults to friendly name
+icon: mdi:lightbulb              # optional
+icon_color: orange               # static colour OR leave blank for state-based colour
+fill_container: false            # true = stretch to fill the section width
+tap_action:
+  action: toggle
+hold_action:
+  action: more-info
+```
+
+**`icon_color` options:**
+Named CSS colours (`red`, `orange`, `green`, `blue`, `purple`, `grey`, `amber`, `teal`)
+or `var(--accent-color)` to follow the HA theme accent.
+
+**State-based colour:** leave `icon_color` blank — Mushroom will use the
+`mush-rgb-state-*` mapping from the theme (e.g. light → orange by default,
+configurable via ZONE 6 in `casa5heynev2-template.yaml`).
+
+### Mushroom light card — RGB colour picker
+
+```yaml
+type: custom:mushroom-light-card
+entity: light.living_room_rgb
+name: Living Room               # optional
+show_brightness_control: true   # brightness slider
+show_color_control: true        # colour wheel (only for RGB lights)
+show_color_temp_control: true   # colour temperature (only for CCT lights)
+collapsible_controls: false     # true = hide sliders until tapped
+use_light_color: true           # tint the icon background to match the light colour
+fill_container: false
+```
+
+**When to use vs Bubble Card sliders:**
+Use the Mushroom light card when you want a single compact card with all
+controls (brightness + colour wheel) in one. Use Bubble Card sliders when
+you want separate cards for each dimension inside a pop-up.
+
+### Mushroom person card
+
+```yaml
+type: custom:mushroom-person-card
+entity: person.alice
+layout: horizontal              # horizontal / vertical
+fill_container: false
+tap_action:
+  action: more-info
+```
+
+Person cards show the entity picture (profile photo) if set on the person
+entity. Bubble Card buttons show a generic icon. Use Mushroom person cards
+in presence pop-ups where photos matter.
+
+### Mushroom climate card
+
+```yaml
+type: custom:mushroom-climate-card
+entity: climate.living_room
+show_temperature_control: true  # +/- temperature buttons
+fill_container: false
+hvac_modes:                     # limit visible HVAC mode buttons
+  - heat
+  - cool
+  - off
+```
+
+Compact alternative to Bubble Card climate card for secondary displays.
+Bubble Card climate is richer (sub-buttons, full slider); Mushroom climate
+is better for at-a-glance chips in a chip bar context.
+
+### Layout option — fill_container
+
+All Mushroom cards support `fill_container: true` which stretches the card
+to fill the width of its parent container. Useful in sections grid contexts
+where you want Mushroom cards to match the visual weight of Bubble Cards.
+

@@ -93,7 +93,7 @@ resources.
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `Template 'X' not found` error on card | Template name typo, or file not loaded | Check exact spelling — template names are case-sensitive. Then hard refresh + HA restart. |
-| Template worked then stopped | Browser cache after HA update | Hard refresh browser |
+| Template works then stopped | Browser cache after HA update | Hard refresh browser. Note: Streamline revalidates templates in the background after the first load — most template edits propagate without a hard refresh. HA restart only required if the card resource itself is missing (HACS reinstall). |
 | Template file changes not reflected | File saved but browser shows old content | HA restart required after editing `streamline_templates.yaml` |
 | `!include_dir_named` parse error | User is on UI-mode Lovelace, not YAML-mode | Only valid in YAML-mode. UI-mode users must use the auto-load file at `/config/www/community/streamline-card/streamline_templates.yaml` |
 | Template loads but `[[variable]]` not substituted | Variable name mismatch between template and usage | Check exact variable name spelling in both the template `default:` block and the `variables:` list at the call site |
@@ -182,6 +182,41 @@ resources.
 | Card not spanning full width | `column_span` not set on section | Add `column_span: 3` (or `max_columns` value) to the section containing the card |
 | HBS footer inside a section | HBS placed inside `sections:` | HBS must be a top-level `cards:` entry after the `sections:` block |
 | Unexpected gaps in grid | Empty sections or mismatched column spans | All column spans across a row should sum to `max_columns` |
+| Section row gaps larger than expected after HA update | HA 2026.4 increased the default `ha-view-sections-row-gap` value | Add to your theme: `ha-view-sections-row-gap: "4px"` or set per-view in raw config under `theme_options:` |
+
+---
+
+## #cardmod-overflow-clipping
+
+### Symptom: card border-radius or box-shadow clipped inside pop-ups
+
+When using a global `card-mod-card` theme rule that sets `overflow: hidden`,
+`border-radius`, or `box-shadow`, cards inside Bubble Card pop-ups are clipped —
+rounded corners and shadows get cut off on all sides.
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Card corners clipped inside pop-up | Pop-up container applies its own `overflow: hidden` context | Add `overflow: visible !important` to `.bubble-pop-up-inner` in your card-mod rule |
+| `box-shadow` invisible inside pop-up | Same overflow context issue | Same fix — or use `filter: drop-shadow()` instead of `box-shadow` (not affected by overflow) |
+| Works on dashboard, fails only in pop-up | Global card-mod rule conflicts with pop-up container | Scope your card-mod rule to exclude pop-up contents: add `:not(.is-popup) ha-card { ... }` |
+
+**Workaround CSS** (add to your global `card-mod-card` or theme `card-mod-theme`):
+```css
+/* Allow pop-up inner container to show overflow from child cards */
+.bubble-pop-up-inner {
+  overflow: visible !important;
+}
+/* or scope your rule to exclude pop-up children */
+:not(.bubble-pop-up) ha-card {
+  border-radius: 28px;
+  overflow: hidden;
+  /* your other styles */
+}
+```
+
+**Skill note:** The skill recommends avoiding `card-mod` on Bubble Cards entirely.
+If you need global card styling, use a Bubble Card module (`is_global: true`) instead
+of `card-mod-card` — Bubble Card modules do not conflict with the pop-up overflow context.
 
 ---
 
@@ -288,4 +323,6 @@ sub_button:
 | Pop-up not dismissing when clicking outside | `close_by_clicking_outside: false` explicitly set | Change to `true` (the default) |
 | Pop-up opens at wrong position on tablet | `popup_mode: default` doesn't centre on mid-size screens | Try `popup_mode: centered` for better tablet positioning |
 | Multiple pop-ups open simultaneously | `close_by_clicking_outside: false` on all + navigation buttons | Ensure each pop-up's close button is visible, or add `auto_close: 30000` |
+| Second pop-up requires two taps to open | v3.2.x behaviour change — navigating to a new hash closes the current pop-up first | Expected. Add a dedicated "go to X" button inside each pop-up that closes the current one and opens the next: use `navigation_path` to the new hash. Users need one more tap; design the navigation flow around this. |
+| Cards inside pop-up have clipped corners or shadows | Global card-mod rule with `overflow: hidden` conflicts with pop-up container | See `troubleshooting-ref.md#cardmod-overflow-clipping` |
 | Pop-up not visible at all after navigating to hash | Pop-up card not a top-level view card | Pop-ups must be in `cards:` at the view root — not inside `sections:`, not inside any stack. See Iron Law: PLACEMENT. |
