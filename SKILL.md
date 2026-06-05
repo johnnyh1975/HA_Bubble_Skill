@@ -8,7 +8,7 @@ description: >
   SYMPTOMS: hardcodes hex in YAML · uses pre-v3.2 pop-up format · places pop-up or HBS inside sections: · generates themes from scratch · uses masonry view · skips UI-mode question for Streamline · omits JS font loader · generates automations instead of navigate actions.
 
 metadata:
-  version: 1
+  version: 1.3
   bubble_card: "3.2.1"   # 3.2.2 is a patch on top; 3.2.1 is the stable base
   streamline_card: "0.2.2"
   sidebar_card: "0.1.9.9"
@@ -68,7 +68,7 @@ Identify output type
   ├── Room pop-up      → check recipes-extended.md for matching room type
   └── Full dashboard   → §2#full-dashboard-workflow (classify first, then generate)
                          Ask: wall panel? → single-mode + size overrides
-                         5-view system → dashboard-system.md → Recipes 7–14
+                         5-view system → dashboard-system.md → Recipes 7–14 (recipes-5view.md)
 
 Entity domain unclear?  → bubble-card-ref.md#entity-domain-map
 UI-mode or YAML-mode?   → ask if Streamline or full dashboard
@@ -97,16 +97,12 @@ Generate → checklist (§8) → deliver
 
 | Thought | Reality |
 |---------|---------|
-| "I'll set bubble-accent-color to #D9BE8B" | WRONG. Set accent-color in the theme file. --bubble-accent-color must point to var(--primary-color). |
-| "I'll put the pop-up in a vertical-stack" | FORBIDDEN. Pop-ups (v3.2+) are standalone top-level cards, never inside stacks. |
-| "I'll put the pop-up inside sections:" | FORBIDDEN. Same rule — pop-ups and HBS must be top-level cards: entries, not inside the sections: block. |
 | "This is v3.1 pop-up format, it's fine" | CHECK. v3.2 migrated all pop-ups. Generate the standalone format with cards: always. |
 | "I'll use card-mod to style this Bubble Card" | AVOID. Use styles: in the card YAML or a Bubble Card module instead. |
 | "subButtonIcon[0] is the first main sub-button" | WRONG since v3.1. Bottom sub-buttons are indexed first. Main sub-buttons come after. |
 | "I'll use !include_dir_named for Streamline templates" | ASK FIRST. Only works in YAML-mode Lovelace. UI-mode users get a parse error. |
 | "The template is added, let's move on" | NOTE. Streamline revalidates templates in the background after the first page load — most edits propagate automatically. If a template doesn't appear, hard-refresh first. HA restart only if the Streamline card resource is missing entirely. |
 | "The HA default styling module is required" | NO. It is optional. The skill outputs a merged theme file that handles Bubble ↔ HA alignment. |
-| "I'll hardcode the card background in the card YAML" | WRONG. All colours flow from the theme file via var() chains. |
 | "Sidebar Card has no issues on HA 2026" | CAUTION. bottomCard has an intermittent setConfig bug. showTopMenuOnMobile behaviour changed in HA 2026.1. Test after install. |
 | "Clicking a button inside pop-up A should open pop-up B directly" | CHANGED in v3.2.x. Navigating from one open pop-up to another now closes the first pop-up — a second tap is required to open the next. Workaround: add a dismiss button to each pop-up, or use `close_by_clicking_outside: false` to prevent accidental dismissal while navigating. |
 | "I swapped the accent, Bubble Card updated but Mushroom is still blue" | EXPECTED without ZONE 6 update. Set `accent-color-rgb: "NR,NG,NB"` in the mode-independent block so `mush-rgb-primary` picks up the new accent. |
@@ -129,7 +125,7 @@ Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 `#var-chain`★ · `#ha-vars` · `#bubble-vars` · `#light-mode` · `#dark-mode` · `#how-to-swap-accent` · `#full-palette-swap` · `#theme-file-structure` · `#mushroom-vars` · `#app-header-vars` · `#font-size-vars`
 
 **typography-ref.md** — font or typography change:
-`#architecture`★ · `#loading-methods` · `#ha-variables` · `#size-system` · `#alexandria` · `#swap-recipes` · `#single-mode-themes` · `#font-troubleshooting`
+`#architecture`★ · `#loading-methods` · `#ha-variables` · `#size-system` · `#alexandria` · `#font-only-update` · `#swap-recipes` · `#single-mode-themes` · `#font-troubleshooting`
 
 **streamline-ref.md** — Streamline templates:
 `#ui-mode-vs-yaml-mode`★ · `#template-anatomy` · `#variable-syntax` · `#javascript-keys` · `#dry-decision` · `#file-organisation` (incl. `!include` tag + background revalidation) · `#known-limitations` · `#bubble-card-interaction`
@@ -145,20 +141,21 @@ Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 
 **casa5heynev2-template.yaml** — base for all theme generation. Never reconstruct from scratch.
 
-**test-dashboard.yaml** — complete importable dashboard assembling Recipes 0–5. Use to verify YAML validity after recipe changes, or as a starter dashboard for users.
+**test-dashboard.yaml** — complete importable dashboard assembling Recipes 0–5. Recipes 1–6 are in `recipes-extended.md`. Use to verify YAML validity or as a starter dashboard.
 
 **troubleshooting-ref.md** — when something is broken:
 `#cache-issues`★ · `#theme-not-applying` · `#popup-not-opening` · `#streamline-not-found` · `#sidebar-not-showing` · `#bubble-styling-ignored` · `#version-migration` · `#hbs-not-ordering` · `#sections-layout-issues` · `#sub-buttons-not-showing` · `#card-state-stale` · `#font-not-loading` · `#popup-z-index` · `#cardmod-overflow-clipping` · `#general-diagnostic-checklist`★
 
-**dashboard-system.md** — 5-view dashboard system:
-`#system-overview`★ · `#navigation-layer` · `#view-overview` · `#view-rooms` · `#view-scenes` · `#view-activity` · `#view-settings` · `#extension-energy` · `#extension-music` · `#classification-output`
+**dashboard-system.md** — architecture, workflow, device profiles, view YAML:
+`#system-overview`★ · `#navigation-layer` · `#classification-output` · `#full-dashboard-workflow` · `#device-type-profiles` · `#sections-anatomy` · `#multi-view-design` · `#panel-view` · `#view-overview` · `#view-rooms` · `#view-scenes` · `#view-activity` · `#view-settings` · `#extension-energy` · `#extension-music`
 
-**recipes-extended.md** — room-specific patterns + 5-view recipes:
-`#security-popup` · `#energy-view` · `#vacuum-popup` · `#presence-panel` · `#bathroom-popup` · `#garage-popup` · `#office-popup` · `#streamline-templates-extended` · `#recipe-7-5view-scaffold` · `#recipe-8-overview` · `#recipe-9-rooms` · `#recipe-10-scenes` · `#recipe-11-activity` · `#recipe-12-settings` · `#recipe-13-energy-ext` · `#recipe-14-music-ext`
+**recipes-extended.md** — room pop-up patterns + core recipes 1–6:
+`#security-popup` · `#energy-view` · `#vacuum-popup` · `#presence-panel` · `#bathroom-popup` · `#garage-popup` · `#office-popup` · `#streamline-templates-extended` · `#recipe-1-room-popup` · `#recipe-2-hbs` · `#recipe-3-media-player` · `#recipe-4-climate` · `#recipe-5-chip-bar` · `#recipe-6-streamline`
+
+**recipes-5view.md** — 5-view scaffold + per-view card YAML:
+`#recipe-7-5view-scaffold` · `#recipe-8-overview` · `#recipe-9-rooms` · `#recipe-10-scenes` · `#recipe-11-activity` · `#recipe-12-settings` · `#recipe-13-energy-ext` · `#recipe-14-music-ext`
 
 ★ = always read this anchor first for this file type
-
----
 
 ## §1 Installation & Prerequisites
 
@@ -239,9 +236,9 @@ modules through the UI. Modules can be written manually as YAML and placed in
 
 ## §2 UX Principles
 
-> No reference file for UX — all content is in this section and in `references/troubleshooting-ref.md` for layout issues.
+> **UX workflow + 5-view system:** `dashboard-system.md` · **Layout issues:** `troubleshooting-ref.md`
 > **Full dashboard design workflow:** `§2#full-dashboard-workflow` — run this before generating any full dashboard.
-> **5-view system:** `references/dashboard-system.md` — complete architecture, view-by-view design, recipes 7–14.
+> **5-view system:** `dashboard-system.md` — architecture + workflow + view YAML · `recipes-5view.md` — Recipes 7–14
 
 These rules govern every dashboard decision. Read before designing any layout.
 
@@ -316,412 +313,148 @@ the 5-view system has exactly one engagement type — this is why the system wor
 
 ### Full-dashboard design workflow
 
-Run this workflow whenever generating a full dashboard from scratch. It replaces
-the old pattern of mapping every entity directly to a card.
+> Read `dashboard-system.md#full-dashboard-workflow` for the complete 6-step process (Collect → Classify → Present → Profile → Generate → Offer).
 
-**Step 1 — Collect**
-
-Ask for (or infer from context):
-- Entity list or room/device description
-- Primary device: phone / tablet / desktop / both (→ device-type profile below)
-- Fixed display? wall panel / kiosk → single-mode theme question
-
-If the user hasn't listed entities: "List your devices or entity IDs — rooms,
-sensors, lights, climate, media players, covers. Don't filter yet, just list
-everything."
-
-If the user says "build something typical" with no entities → use Recipe 0
-placeholder entities and note that.
-
-**Step 2 — Classify**
-
-Sort every entity into one of four buckets. Do this before writing any YAML.
-
-```
-Bucket 0 — Automate, don't build
-  binary_sensor.*_motion         → automation trigger, not a control
-  binary_sensor.*_door/window    → state chip at most, never a control button
-  binary_sensor.*_presence       → automation trigger
-  Lights where motion sensor exists → suggest automation; keep manual override
-                                    inside pop-up only, not on main view
-  Covers with sun position logic → suggest automation; pop-up not main view
-  sensor.* readings              → chip bar only, never a control card
-
-Bucket 1 — Complications (chip bar / Overview view)
-  Temperature / humidity sensors
-  Presence indicators (person.*)
-  Security state (alarm_control_panel.*)
-  Weather sensor
-  Active lights count (template sensor)
-  Current power draw
-
-Bucket 2 — Brief interaction (room button → pop-up)
-  Room light groups
-  Climate controls
-  Media players
-  Covers / blinds (manual override)
-  Scenes users consciously trigger
-  Locks (manual override)
-  input_boolean.* representing real choices (guest mode, sleep mode)
-
-Bucket 3 — Deep engagement (secondary view)
-  Energy monitoring graphs
-  Automation overview / toggles
-  Camera feeds
-  Vacuum maps
-  Device configuration
-  Long-term sensor history
-  Infrastructure / server status
-```
-
-**Step 3 — Present the classification**
-
-Show the classification to the user before writing any YAML:
-
-```
-Here's how I'd structure this before building:
-
-Chip bar / Overview (always visible):
-  • [entity list]
-
-Room buttons → pop-ups:
-  • [room list with contents]
-
-Secondary views (rarely needed):
-  • [entity list]
-
-Not on the dashboard (better as automations):
-  • [entity] — suggest: [automation trigger description]
-```
-
-Then: "Does this look right? Anything to move or add before I generate?"
-
-If the user confirms → generate.
-If the user adjusts → update classification, generate.
-If the user says "just build it" → apply classification silently, generate.
-
-**Claude never refuses based on classification.** The user has final say.
-If they want a motion sensor card, add it. Note it once, then build.
-
-**Step 4 — Apply device-type profile**
-
-Look up the device in the profile table below. Apply max_columns, card_layout,
-font size, and nav pattern before generating any YAML.
-
-**Step 5 — Generate from the 5-view system**
-
-Map the classification output to the 5-view structure:
-- Bucket 1 → Overview view chip bar + per-room status grid
-- Bucket 2 → Rooms view (room buttons + pop-ups)
-- Bucket 3 → Settings view or secondary views
-- Bucket 0 → Activity view automation category + ha-yaml handoff note
-
-Read `references/dashboard-system.md` for the complete view-by-view structure
-and Recipes 7–14 before generating.
-
-**Step 6 — After delivery**
-
-Offer two things, briefly:
-- "Want me to generate the Activity or Settings view?"
-- "Want the automation suggestions for the Bucket 0 items? I'll hand those
-  off to the ha-yaml skill with context."
+Steps in brief:
+1. **Collect** — entity list, primary device, fixed display?
+2. **Classify** — sort every entity into Bucket 0 (automate) / 1 (complications) / 2 (brief interaction) / 3 (deep engagement). Full bucket definitions: `dashboard-system.md#full-dashboard-workflow`.
+3. **Present** — show classification to user before writing any YAML. Never refuse based on it — user has final say.
+4. **Profile** — apply device-type profile (`dashboard-system.md#device-type-profiles`)
+5. **Generate** — map buckets to 5-view structure (`dashboard-system.md#classification-output`)
+6. **Offer** — "Want the Activity/Settings view?" + "Want Bucket 0 automation suggestions?"
 
 ---
 
 ### Device-type profiles
 
-One lookup replaces six separate questions. Apply this before generating any
-full dashboard or setting max_columns, card_layout, or theme mode.
+> Full table: `dashboard-system.md#device-type-profiles`
 
-| Device | max_columns | card_layout | Font size | Nav pattern | Theme mode |
+| Device | max_columns | card_layout | Font | Nav | Theme mode |
 |---|---|---|---|---|---|
-| Phone (primary) | 2 | large | 14px default | HBS footer only | Both modes |
-| 10" wall tablet | 3 | large | 16px (bump up) | HBS + optional sidebar | Single-mode — ask light/dark |
-| Desktop browser | 4 | normal | 14px default | Sidebar Card + HBS | Both modes |
-| e-ink display | 2 | large | 16px (bump up) | HBS footer only | Single-mode light |
-| Both phone + desktop | 3 | large | 14px default | HBS + Sidebar (sidebar hidden mobile) | Both modes |
+| Phone | 2 | large | 14px | HBS only | Both |
+| 10" wall tablet | 3 | large | 16px↑ | HBS + sidebar | Single-mode |
+| Desktop | 4 | normal | 14px | Sidebar + HBS | Both |
+| e-ink | 2 | large | 16px↑ | HBS only | Single-mode light |
+| Phone + desktop | 3 | large | 14px | HBS + sidebar (hidden mobile) | Both |
 
-**Single-mode trigger:** wall tablet and e-ink always prompt the single-mode
-question. Phone and desktop browser never do — they get both modes by default.
-
-**Wall tablet font bump:** set `ha-font-size-body: "16px"` and
-`ha-font-size-small: "14px"` in the theme. Also set Mushroom font sizes
-separately — they do not inherit from `ha-font-size-body`:
-```yaml
-mush-card-primary-font-size:   "15px"
-mush-card-secondary-font-size: "13px"
-mush-chip-font-size:           "0.35em"
-```
+Wall tablet / e-ink → always ask single-mode. Wall tablet font bump → also set Mushroom sizes separately (`typography-ref.md#size-system`).
 
 ---
 
 ### Progressive disclosure via pop-ups
 
-Bubble Card pop-ups are the primary progressive disclosure mechanism. Use them to:
-- Group all controls for a single room behind one button
-- Show device details (media player art, camera feed, vacuum map) without leaving the view
-- Surface rarely-needed controls (climate schedules, cover position fine-tuning)
+Pop-ups are the primary progressive disclosure mechanism — group all room controls behind one button. Sizing rules: `bubble-card-ref.md#pop-up`.
 
-**Pop-up sizing rules:**
-- Default width on desktop: `560px` — wide enough for a 2-column grid of buttons
-- Use `popup_mode: fit-content` for simple single-entity pop-ups (climate, cover)
-- Use `popup_mode: centered` for camera feeds or complex layouts
-- Always set `with_bottom_offset: true` when using an HBS footer
+- Default desktop width: `560px`
+- `popup_mode: fit-content` for simple single-entity pop-ups
+- `popup_mode: centered` for cameras or complex layouts
+- Always `with_bottom_offset: true` when HBS footer is present
 
 ---
 
 ### Navigation patterns
 
-**Choose based on primary device:**
+| Scenario | Pattern |
+|----------|---------|
+| Mobile primary | HBS footer only |
+| Desktop primary | Sidebar Card |
+| Both equally | HBS footer + Sidebar Card (`mobile: 0, tablet: 0, desktop: 20`) |
 
-| Scenario | Pattern | Why |
-|----------|---------|-----|
-| Mobile primary | Horizontal buttons stack (HBS) footer | Thumb-reachable, scrollable, auto-orders by room occupancy |
-| Desktop primary | Sidebar Card | Persistent nav, clock, weather summary, bottom card slot |
-| Both equally | HBS footer + Sidebar Card (sidebar hidden on mobile) | HBS handles mobile; sidebar adds desktop context |
+Default "both equally": HBS is primary nav, Sidebar Card desktop-only, `is_sidebar_hidden: true` on HBS.
 
-When targeting both equally (the default for this skill): implement HBS as the
-primary nav, add Sidebar Card with `width: { mobile: 0, tablet: 0, desktop: 20 }`
-so it only appears on desktop. Set `is_sidebar_hidden: true` on the HBS card when
-Sidebar Card is present on desktop.
-
-**5-view navigation pattern:**
-When using the 5-view system, HBS buttons link to view paths, not pop-up hashes:
-```yaml
-1_name: Overview
-1_icon: mdi:home-variant
-1_link: /lovelace/overview
-# No 1_pir_sensor — views are not room-based
-# No auto_order — view order is fixed and intentional
-```
+5-view nav: HBS buttons link to `/lovelace/view-path`, not pop-up hashes. No `auto_order`, no `_pir_sensor`.
 
 ---
 
 ### Touch target sizing
 
-All interactive elements must meet minimum sizes for reliable tap accuracy:
+> Full table: `bubble-card-ref.md#touch-targets`
 
-| Element | Minimum size | Bubble Card setting |
-|---------|--------------|---------------------|
-| HBS button | 48×48px | Default — do not reduce with CSS |
-| Sub-button (main) | 36×36px | Default |
-| Sub-button (bottom group) | 48px height | Set `custom_height: 48` if reducing |
-| Pop-up close button | 44×44px | Default — do not hide unless replacing |
-| Slider track | 44px tall hit area | Default |
-
-Never reduce icon or button sizes below these thresholds with custom CSS.
+Never reduce HBS buttons (48px), sub-buttons main (36px), or slider track (44px) with custom CSS.
 
 ---
 
 ### State colour feedback
 
-Users need instant visual confirmation that a control worked. Ensure:
-
-- **Active state:** entity `on` → card background uses `state-active-color`
-  (→ `accent-color` in Casa5HeyneV2). Never suppress this with a hardcoded background.
-- **Inactive state:** entity `off` → `state-inactive-color` (8% black in light,
-  10% white in dark). Subtle but distinguishable.
-- **Unavailable state:** icon dims to `disabled-text-color`. Do not hide unavailable
-  entities — show them dimmed so users know the device exists but is offline.
-- **Slider fill:** reflects brightness/volume/position. Do not override
-  `--bubble-range-fill` with a static colour — it should track the light colour for
-  RGB lights.
+Variables live in the theme — never override with hardcoded values:
+- On → `state-active-color` (→ `accent-color`)
+- Off → `state-inactive-color` (8% black / 10% white)
+- Unavailable → icon dims to `disabled-text-color` — show dimmed, never hide
+- RGB sliders → `--bubble-range-fill` tracks light colour — do not override with static colour
 
 ---
 
 ### Mobile-first layout rules
 
-- Use `sections` view type (default since HA 2024.3). Never `masonry` for new dashboards.
-- Set `max_columns: 2` for mobile-friendly views, `max_columns: 4` for desktop-optimised views.
-- For "both equally" targets: set `max_columns: 3` — readable on tablet and desktop,
-  wraps gracefully to 1–2 columns on phone.
-- Card height: use `card_layout: large` for primary room control cards so they are
-  finger-sized. Use `card_layout: normal` for secondary/informational cards.
-- Avoid horizontal-stack with more than 2 cards — wrapping behaviour is unpredictable
-  on narrow screens. Use sub-buttons or a grid section instead.
+- View type: always `sections`. Never `masonry`.
+- `max_columns`: 2 mobile / 3 tablet+desktop / 4 desktop-only
+- `card_layout: large` for primary controls; `normal` for secondary/info cards
+- Avoid horizontal-stack with more than 2 cards — wrapping is unpredictable on narrow screens
 
 ---
 
 ### Information density
 
-- **Max 6–8 interactive elements per view** before introducing pop-ups. Beyond this,
-  users stop seeing the dashboard and start hunting.
-- Use `card_type: separator` to divide pop-up content into named sections (Lights,
-  Covers, Media). Separators with icons dramatically reduce scanning time.
-- Use sub-buttons for secondary information (battery level, last changed, brightness
-  value) — they do not compete visually with the primary control.
-- Show entity state text (`show_state: true`) only when the state adds meaning beyond
-  the icon (e.g. temperature value, media title). For binary on/off states, the card
-  colour is sufficient.
+- Max 6–8 interactive elements per view before introducing pop-ups
+- Use `card_type: separator` with icon to divide pop-up content into named sections
+- `show_state: true` only when state adds meaning beyond icon (temperature, media title)
+- Sub-buttons for secondary info (battery, last-changed) — they don't compete with primary control
 
 ---
 
-### Naming conventions for dashboards
+### Naming conventions
 
-- Pop-up hash: lowercase, hyphenated room name. `'#living-room'` not `'#LivingRoom'`
-- HBS button order: most-occupied rooms first. Use `auto_order: true` with
-  `_pir_sensor` references to make this dynamic.
-- Card names: match the entity's friendly name in HA. Do not create dashboard-specific
-  aliases — it breaks the mental model when users also use the HA app or voice.
+- Pop-up hash: lowercase hyphenated — `'#living-room'` not `'#LivingRoom'`
+- HBS button order: most-occupied rooms first; use `auto_order: true` with `_pir_sensor`
+- Card names: match entity friendly name — no dashboard-specific aliases
 
 ---
 
 ### Sections view anatomy
 
-Sections view (default since HA 2024.3) is the required view type for all
-new dashboards. Understand its structure before generating any full dashboard.
+> Full structure diagram + column_span table: `dashboard-system.md#sections-anatomy`
 
-```
-view (type: sections, max_columns: N)
-  │
-  ├── cards:                     ← top-level cards (pop-ups + HBS live here)
-  │     ├── [pop-up card]        ← must be top-level, NEVER inside sections
-  │     ├── [pop-up card]
-  │     ├── sections:            ← the visible grid
-  │     │     ├── section        ← column_span controls width
-  │     │     │     └── cards: [...]
-  │     │     ├── section
-  │     │     │     └── cards: [...]
-  │     │     └── section
-  │     │           └── cards: [...]
-  │     └── [HBS footer card]    ← must be LAST top-level card
-```
-
-**column_span rules (with max_columns: 3):**
-
-| column_span | Desktop width | Mobile behaviour |
-|-------------|--------------|-----------------:|
-| 3 | 100% (full width) | Full width |
-| 2 | 66% | Full width (auto-wraps) |
-| 1 | 33% | Full width (auto-wraps) |
-
-**Making a card span full width:**
-Set `column_span` on the *section*, not the card. All cards in a section
-share the section's span:
-```yaml
-sections:
-  - type: grid
-    column_span: 3        # this section is full-width
-    cards:
-      - type: custom:bubble-card
-        card_type: sub-buttons   # chip bar — now full width
-```
-
-**Section `type: grid` is always correct for Bubble Card content.**
-Do not use `type: plain` or omit type — it changes padding and may cause
-pop-up positioning issues.
+Key rules:
+- Pop-ups → top-level `cards:` entries, before `sections:` block — never inside sections
+- HBS → last top-level `cards:` entry — never inside sections
+- `section type: grid` always for Bubble Card content
+- `column_span` on the section, not the card
 
 ---
 
 ### Accessibility
 
-Beyond WCAG contrast (covered in §3a), these rules apply to all dashboards.
-
 **Motion sensitivity (wall panels):**
-- Never add CSS `animation:` or `transition:` with duration > 300ms on
-  always-on displays. Users with vestibular disorders are affected.
-- The default Bubble Card transitions are within safe limits — do not extend them.
-- Never use `rise_animation: true` on HBS for wall-panel dashboards
-  (it plays on every page load).
+- No CSS `animation:`/`transition:` > 300ms on always-on displays
+- Never `rise_animation: true` on HBS for wall panels
 
 **Icon + label redundancy:**
-- Never rely on colour alone to convey state. An entity's `on`/`off` state
-  must be distinguishable by icon shape, label text, OR both — not colour alone.
-- The Bubble Card active/inactive colour change is supplementary, not primary.
+- Never rely on colour alone to convey state — icon shape or label text must also differ
 
-**Font size for wall panels viewed from distance:**
-- Minimum readable font size at 1.5m viewing distance: 16px (HA default is 14px).
-- If building for a wall panel: set `ha-font-size-body: "16px"` in the theme
-  and `ha-font-size-small: "14px"` to bump the base upward.
-- Use `card_layout: large` on all primary control cards for wall panels —
-  this increases both touch target and text size.
+**Font size at distance:**
+- Wall panels viewed at 1.5m+ → `ha-font-size-body: "16px"` in theme, `card_layout: large` on all primary cards
 
 **Voice assistant alignment:**
-- Card `name:` fields should match the entity's friendly name in HA.
-- Dashboard-specific aliases ("Main Light" vs the entity's "Living Room Ceiling")
-  break the mental model when the user also uses voice ("Hey Google, turn on
-  the main light" fails if the entity is named differently).
-- Use `show_name: true` and keep names identical to entity friendly names.
+- `name:` must match entity friendly name — dashboard aliases break voice commands
 
 ---
 
 ### When to use Streamline Card templates
 
-Apply the DRY rule: if you have written the same card structure 3 or more times
-with only entity/name changes, extract a Streamline template. Good candidates:
-
-- Every room light card (same structure, different entity)
-- Every cover card (open/stop/close pattern)
-- Every climate card per zone
-- Sensor chip bars (same layout, many sensors)
-
-Do not template one-offs or cards with significantly different structure.
-The overhead of defining and maintaining a template is not worth it for fewer than
-3 instances.
+Apply the DRY rule: 3+ identical card structures with only variable substitutions → extract a template. See `streamline-ref.md#dry-decision`.
 
 ---
 
-### Multi-view dashboard design
+### Multi-view design + Panel view
 
-The 5-view system (`references/dashboard-system.md`) is the recommended structure
-for new dashboards. Use it as the starting point. Split to additional views only
-when a specific domain needs its own canvas — see the Energy and Music extension
-views in `dashboard-system.md`.
+> `dashboard-system.md#multi-view-design` · `dashboard-system.md#panel-view`
 
-A single view with pop-ups is still valid for simple homes or when the user
-explicitly wants a minimal single-view dashboard.
+Single view with pop-ups is valid for simple homes. Add views only when:
+- 8–10+ room buttons (split into zones)
+- Domain needs always-visible display (cameras)
+- Different user groups need different primary views
 
-**When to add a view beyond the 5-view system:**
-- More than 8–10 room buttons in the Rooms view (split into zones)
-- A domain needs always-visible display that doesn't fit Overview (security cameras)
-- Different user groups need completely different primary views (family vs admin)
-
-**Linking views from the HBS footer:**
-```yaml
-# HBS button linking to a view path (5-view nav pattern)
-1_name: Overview
-1_icon: mdi:home-variant
-1_link: /lovelace/overview
-# Note: no 1_pir_sensor — views are not room-based, no auto_order
-```
-
----
-
-### Panel view — for wall panels and kiosk dashboards
-
-The `type: panel` view type forces a single card to fill the entire screen.
-Use it when a custom card (Bubble Card sub-buttons, a picture-elements card,
-or a third-party panel) should take up the full display without the standard
-Lovelace grid padding.
-
-```yaml
-views:
-  - title: Wall Panel
-    path: wall-panel
-    type: panel          # ← single full-screen card, no grid
-    cards:
-      - type: custom:bubble-card
-        card_type: sub-buttons
-        # ... this card now fills the entire screen
-```
-
-**When to use `type: panel`:**
-- Always-on kiosk tablets where one card fills the screen
-- Custom full-screen navigation panels
-- Wall panels using a picture-elements overlay card
-- Any situation where standard card padding looks wrong at the edges
-
-**When not to use `type: panel`:**
-- Standard room dashboards with multiple cards
-- Dashboards that need to work on both phone and desktop (panel is desktop-only useful)
-- Any view containing pop-ups (pop-ups work in panel views but positioning may shift)
-- Surface rarely-needed controls (climate schedules, cover position fine-tuning)
-
-**Pop-up sizing rules:**
-- Default width on desktop: `560px` — wide enough for a 2-column grid of buttons
-- Use `popup_mode: fit-content` for simple single-entity pop-ups (climate, cover)
-- Use `popup_mode: centered` for camera feeds or complex layouts
-- Always set `with_bottom_offset: true` when using an HBS footer
+`type: panel` → single card fills entire screen. Use for kiosk tablets, full-screen nav panels, picture-elements overlays.
 
 ---
 
@@ -832,93 +565,26 @@ Only the colour zones change (accent lever + optional background zones).
 > **Font swap:** `typography-ref.md#swap-recipes`
 > **Custom font from scratch:** `typography-ref.md#loading-methods` + `#ha-variables`
 > **Wall-panel sizes:** `typography-ref.md#size-system`
+> **Font-only update lines:** `typography-ref.md#font-only-update` — exact variable list + diff format
 > **Single-mode themes:** `typography-ref.md#single-mode-themes`
 
-Typography changes are independent of colour palette changes. They can be
-combined in one theme delivery or handled separately.
+Typography changes are independent of colour changes and can be combined or handled separately.
 
-### When typography is in scope
+**In scope when:** user asks to change font · wall panel needs larger text · font looks different across devices · headings vs body font · new theme from scratch.
 
-- User asks to change the font
-- User mentions a wall panel needs larger text
-- User asks why text looks different on different devices
-- User wants a different font for headings vs body
-- User is setting up a new theme from scratch (font + colour together)
-
-### Mushroom font sizing — not inherited from HA
-
-**Important:** Mushroom Cards has its own font size variables that do not
-inherit from `ha-font-size-body`. If you increase `ha-font-size-body` for
-a wall panel, Mushroom chip cards and entity cards will remain at their
-default sizes unless you also set these separately:
-
+**Mushroom font sizing — not inherited from HA:**
+Mushroom has its own size variables. If bumping `ha-font-size-body` for a wall panel, also set:
 ```yaml
-# In mode-independent theme block — alongside ha-font-size-body override
 mush-card-primary-font-size:   "15px"   # default 14px
 mush-card-secondary-font-size: "13px"   # default 12px
-mush-chip-font-size:           "0.35em" # default 0.3em (relative to chip height)
+mush-chip-font-size:           "0.35em" # default 0.3em
 ```
 
-Always set these when generating wall-panel themes that include Mushroom chips.
+**Font delivery always requires three things:** JS loader file at `/config/www/` + `extra_module_url` entry in `configuration.yaml` + theme variable changes. See `typography-ref.md#loading-methods` for exact file content. Remind user: restart HA, then hard-refresh browser.
 
-### Font delivery format
-
-Always deliver two things together:
-
-**1. The JS loader file** — complete content to create at `/config/www/`:
-```javascript
-// /config/www/font-name.js
-const link = document.createElement('link');
-link.rel = 'stylesheet';
-link.href = 'https://fonts.googleapis.com/css2?family=FontName:wght@300;400;500;600;700&display=swap';
-document.head.appendChild(link);
-```
-
-**2. The `configuration.yaml` addition:**
-```yaml
-frontend:
-  extra_module_url:
-    - /local/font-name.js
-```
-
-**3. The theme variable changes** — in the complete theme file.
-
-Always remind the user: restart HA after adding `extra_module_url`, then
-hard-refresh the browser. Without restart, the font JS file is not loaded.
-
-### Font decision questions
-
-Before generating a font swap, ask if not specified:
-
-> "Do you want to host the font files locally (works offline, no flash of
-> unstyled text) or load from Google Fonts CDN (easier setup, requires internet)?"
-
-And for existing Alexandria users changing font only:
-> "Do you want a complete new theme file, or just the font-related lines to
-> update in your existing theme?"
-
-### Delivering font-only updates
-
-If the user only wants to change the font (not colours), deliver just the
-changed lines rather than a full theme file — it's less error-prone for users
-to apply a 10-line diff than to replace a 500-line file.
-
-```yaml
-# Changes to make in your existing theme file (mode-independent block):
-ha-font-family-body:    "NewFont, sans-serif"
-ha-font-family-heading: "NewFont, sans-serif"
-ha-font-family-code:    "NewFont, monospace"
-paper-font-common-base_-_font-family: "var(--primary-font-family)"
-paper-font-body1_-_font-family:       "var(--primary-font-family)"
-paper-font-subhead_-_font-family:     "var(--primary-font-family)"
-paper-font-headline_-_font-family:    "var(--primary-font-family)"
-paper-font-caption_-_font-family:     "var(--primary-font-family)"
-paper-font-title_-_font-family:       "var(--primary-font-family)"
-ha-card-header-font-family:           "var(--primary-font-family)"
-
-# Changes in modes.light AND modes.dark:
-primary-font-family: "NewFont, sans-serif"
-```
+**Before generating, ask if not specified:**
+- Local font files (offline, no FOUT) or Google Fonts CDN (easier)?
+- For existing Alexandria users: complete new file, or just the changed lines?
 
 ---
 
@@ -1008,162 +674,48 @@ belongs on the card body itself.
 
 > **Always read first:** `sidebar-ref.md#known-issues` — health status and HA 2026.x caveats
 > **Then:** `sidebar-ref.md#installation` → `#width-breakpoints` → `#combined-example`
+> **Clock + fallback patterns:** `sidebar-ref.md#template-messages` · `sidebar-ref.md#bottom-card`
 
 Read `references/sidebar-ref.md` before generating any Sidebar Card config.
 
-### When to include Sidebar Card
+**Default for "both equally" targets:** include Sidebar Card, desktop-only (`mobile: 0, tablet: 0, desktop: 20`).
+Pair with HBS footer for mobile. Set `is_sidebar_hidden: true` on HBS when Sidebar Card is present.
 
-Default answer for "both equally" device targets: **yes, include it**, but
-desktop-only:
+**Before delivering, confirm:**
+- HA ≥ 2024.3 (sections view compatibility)
+- User aware of `bottomCard` reliability issue → add warning comment if they use it
+- HA 2026.x → advise testing `showTopMenuOnMobile` after install
 
-```yaml
-sidebar:
-  width:
-    mobile: 0
-    tablet: 0
-    desktop: 20
-```
-
-Pair with HBS footer as the primary mobile navigation. Set
-`is_sidebar_hidden: true` on the HBS card so it positions correctly when
-the native HA sidebar is hidden by Sidebar Card on desktop.
-
-### Known issue checklist before delivering
-
-Before generating any Sidebar Card config, confirm with the user:
-- [ ] HA version ≥ 2024.3? (required for sections view compatibility)
-- [ ] Are they aware of the `bottomCard` reliability issue?
-  If yes and they want `bottomCard` → add a warning comment in the YAML.
-- [ ] Are they on HA 2026.x? If yes, advise testing `showTopMenuOnMobile`
-  after install as behaviour may differ from documentation.
-
-### Clock + date + template message pattern
-
-Always include clock, date, and at least one template message for desktop
-sidebar setups — a sidebar with only a nav menu is wasted space. The
-pattern below is the recommended baseline:
-
-```yaml
-sidebar:
-  digitalClock: true
-  date: true
-  dateFormat: "dddd, D MMMM"
-  template: |
-    <li>
-      {% if now().hour < 12 %}Good morning{% elif now().hour < 18 %}Good afternoon{% else %}Good evening{% endif %}
-    </li>
-    {% set lights = states.light | selectattr('state','eq','on') | list | count %}
-    {% if lights > 0 %}<li>{{ lights }} light{{ 's' if lights > 1 }} on</li>{% endif %}
-```
-
-### Fallback pattern — when Sidebar Card issues are a dealbreaker
-
-If the user experiences the `bottomCard` bug persistently, or if
-`showTopMenuOnMobile` does not behave correctly on their HA version,
-offer this HBS-only desktop alternative:
-
-```yaml
-# No Sidebar Card — use HBS footer + a full-width context chip bar at the
-# top of the view instead. Works reliably on all HA versions.
-
-# Top of view — contextual chip bar replaces the sidebar info panel
-- type: custom:bubble-card
-  card_type: sub-buttons
-  hide_main_background: true
-  sub_button:
-    bottom:
-      - name: Context
-        buttons_layout: inline
-        justify_content: space-between
-        group:
-          - entity: sensor.time            # clock equivalent
-            show_state: true
-            show_icon: false
-            fill_width: false
-            show_background: false
-          - entity: weather.home           # weather summary
-            show_state: true
-            show_icon: true
-            fill_width: false
-            show_background: false
-          - entity: sensor.lights_on_count # lights summary
-            show_state: true
-            show_icon: true
-            icon: mdi:lightbulb
-            fill_width: false
-            show_background: false
-
-# Bottom — HBS footer handles all navigation (mobile + desktop)
-- type: custom:bubble-card
-  card_type: horizontal-buttons-stack
-  auto_order: true
-  highlight_current_view: true
-  is_sidebar_hidden: false    # no Sidebar Card → HA sidebar visible → false
-  # ... room buttons as normal
-```
-
-**When to suggest this fallback:**
-- User confirms persistent `bottomCard setConfig` errors after multiple refreshes
-- User on HA 2026.x and `showTopMenuOnMobile` is not working as expected
-- User wants a simpler single-component nav that works on all screen sizes
+**If `bottomCard` issues are persistent:** offer the HBS-only fallback pattern from `sidebar-ref.md#bottom-card`.
 
 ---
 
 ## §6 Streamline Card
 
-> **Always read first:** `streamline-ref.md#ui-mode-vs-yaml-mode` — must ask user before generating
+> **Always read first:** `streamline-ref.md#ui-mode-vs-yaml-mode` — must ask before generating
 > **Then:** `streamline-ref.md#template-anatomy` → `#variable-syntax` → `#dry-decision`
-> **JS templates:** `streamline-ref.md#javascript-keys` — note the [[variable]] substitution-before-evaluation gotcha
+> **JS templates:** `streamline-ref.md#javascript-keys` — [[variable]] substitution-before-evaluation gotcha
+> **Delivery format:** `streamline-ref.md#delivery-format` — always two labelled blocks (template + usage)
 
 Read `references/streamline-ref.md` before generating any Streamline config.
 
-### Mandatory first question
+**Mandatory first question** — ask before writing any template YAML:
+> "Are your Lovelace dashboards managed through the HA UI, or do you use YAML-mode with a `ui-lovelace.yaml` file?"
 
-Before writing any Streamline template or usage YAML:
+- UI-mode → templates to `streamline_templates.yaml` only; usage YAML separate for dashboard editor
+- YAML-mode → may use `!include` and `!include_dir_named`; split files for many templates
 
-> "Are your Lovelace dashboards managed through the HA UI (the default), or
-> do you use YAML-mode Lovelace with a `ui-lovelace.yaml` file?"
-
-- **UI-mode answer** → templates go in the auto-load file only. Deliver
-  template content as a YAML block to paste into
-  `/config/www/community/streamline-card/streamline_templates.yaml`, and
-  card usage YAML separately for the dashboard editor.
-- **YAML-mode answer** → may use `!include` and `!include_dir_named`.
-  Deliver organised as split files if the user has many templates.
-
-### Template delivery format
-
-Always deliver in two clearly labelled blocks:
-
-**Block 1 — Add to `streamline_templates.yaml`:**
-```yaml
-my_template:
-  default:
-    - icon: mdi:ceiling-light
-  card:
-    type: custom:bubble-card
-    # ...
-```
-
-**Block 2 — Add to dashboard YAML (card usage):**
-```yaml
-type: custom:streamline-card
-template: my_template
-variables:
-  - entity: light.living_room
-  - name: Living Room
-```
-
-Remind the user to clear browser cache and restart HA after adding new templates.
+Remind user to clear browser cache after adding new templates.
 
 ---
 
 ## §7 Recipes
 
-> **Extended recipes:** `references/recipes-extended.md` — security, energy, vacuum, presence, bathroom, garage
-> **Sections scaffold:** Recipe 0 below is the outer view wrapper — always start here for a full dashboard
+> **Core recipes (1–6):** `recipes-extended.md` · **5-view recipes (7–14):** `recipes-5view.md`
+> — Recipe 0 (scaffold) is below. Recipes 1–6 are in `recipes-extended.md#recipe-1-room-popup` through `#recipe-6-streamline`. Recipes 7–14 are in `recipes-5view.md`.
+> — Room pop-up patterns (security, energy, vacuum, presence, bathroom, garage) are in `recipes-extended.md`.
 
-Complete, copy-paste-ready YAML for the most common dashboard patterns.
+Recipe 0 is the outer view wrapper — always start here for a full dashboard.
 All YAML uses the Casa5HeyneV2 var() chain — no hardcoded colours.
 Replace placeholder entity IDs (e.g. `light.living_room`) with real entities.
 
@@ -1288,297 +840,6 @@ views:
 - Pop-ups do NOT go inside `sections:` — they are top-level `cards:` before the sections block
 - HBS does NOT go inside `sections:` — it is a top-level `cards:` entry after sections
 
-### Recipe 1 — Room pop-up with lights, cover, and climate
-
-```yaml
-# Pop-up — place as a top-level card in the view
-type: custom:bubble-card
-card_type: pop-up
-hash: '#living-room'
-name: Living Room
-icon: mdi:sofa
-entity: light.living_room_group
-width_desktop: "560px"
-with_bottom_offset: true
-cards:
-
-  # ── Lights ──────────────────────────────────────────────
-  - type: custom:bubble-card
-    card_type: separator
-    name: Lights
-    icon: mdi:lightbulb-group
-
-  - type: custom:bubble-card
-    card_type: button
-    button_type: slider
-    entity: light.living_room_ceiling
-    name: Ceiling
-    icon: mdi:ceiling-light
-    card_layout: large
-    light_slider_type: brightness
-
-  - type: custom:bubble-card
-    card_type: button
-    button_type: switch
-    entity: light.living_room_floor_lamp
-    name: Floor Lamp
-    icon: mdi:floor-lamp
-    card_layout: large
-
-  # ── Cover ───────────────────────────────────────────────
-  - type: custom:bubble-card
-    card_type: separator
-    name: Cover
-    icon: mdi:blinds
-
-  - type: custom:bubble-card
-    card_type: cover
-    entity: cover.living_room_blinds
-    name: Blinds
-    card_layout: large
-
-  # ── Climate ─────────────────────────────────────────────
-  - type: custom:bubble-card
-    card_type: separator
-    name: Climate
-    icon: mdi:thermometer
-
-  - type: custom:bubble-card
-    card_type: climate
-    entity: climate.living_room
-    name: Thermostat
-    card_layout: large
-    state_color: true
-    step: 0.5
-```
-
----
-
-### Recipe 2 — HBS footer navigation (both mobile + desktop)
-
-```yaml
-# Place as the LAST card in the view
-type: custom:bubble-card
-card_type: horizontal-buttons-stack
-auto_order: true
-highlight_current_view: true
-is_sidebar_hidden: true
-
-1_name: Living Room
-1_icon: mdi:sofa
-1_link: '#living-room'
-1_entity: light.living_room_group
-1_pir_sensor: binary_sensor.living_room_motion
-
-2_name: Kitchen
-2_icon: mdi:chef-hat
-2_link: '#kitchen'
-2_entity: light.kitchen_group
-2_pir_sensor: binary_sensor.kitchen_motion
-
-3_name: Bedroom
-3_icon: mdi:bed
-3_link: '#bedroom'
-3_entity: light.bedroom_group
-3_pir_sensor: binary_sensor.bedroom_motion
-
-4_name: Office
-4_icon: mdi:desk-lamp
-4_link: '#office'
-4_entity: light.office
-4_pir_sensor: binary_sensor.office_motion
-
-5_name: Settings
-5_icon: mdi:cog
-5_link: /lovelace/settings
-```
-
----
-
-### Recipe 3 — Media player card with album art background
-
-```yaml
-type: custom:bubble-card
-card_type: media-player
-entity: media_player.living_room_speaker
-name: Speaker
-card_layout: large
-cover_background: true
-show_state: true
-min_volume: 0
-max_volume: 100
-sub_button:
-  main:
-    - name: Source
-      select_attribute: source
-      show_arrow: true
-      show_state: false
-      state_background: false
-      show_background: false
-```
-
----
-
-### Recipe 4 — Climate card with HVAC mode sub-button
-
-```yaml
-type: custom:bubble-card
-card_type: climate
-entity: climate.living_room
-name: Thermostat
-icon: mdi:thermostat
-card_layout: large
-state_color: true
-step: 0.5
-sub_button:
-  main:
-    - name: Mode
-      select_attribute: hvac_modes
-      show_arrow: true
-      show_icon: false
-      show_state: true
-      state_background: false
-      show_background: false
-```
-
----
-
-### Recipe 5 — Sensor chip bar (sub-buttons only)
-
-```yaml
-# Glanceable chip bar — place at the top of a view
-type: custom:bubble-card
-card_type: sub-buttons
-hide_main_background: true
-sub_button:
-  bottom:
-    - name: Chips
-      buttons_layout: inline
-      justify_content: flex-start
-      group:
-        - entity: sensor.living_room_temperature
-          show_name: false
-          show_state: true
-          show_icon: true
-          icon: mdi:thermometer
-          fill_width: false
-          show_background: true
-          state_background: false
-        - entity: sensor.living_room_humidity
-          show_name: false
-          show_state: true
-          show_icon: true
-          icon: mdi:water-percent
-          fill_width: false
-          show_background: true
-          state_background: false
-        - entity: binary_sensor.living_room_motion
-          show_name: true
-          name: Motion
-          show_state: false
-          show_icon: true
-          fill_width: false
-          show_background: true
-          state_background: true
-        - entity: person.alice
-          show_name: true
-          show_state: false
-          show_icon: true
-          fill_width: false
-          show_background: true
-          state_background: true
-```
-
----
-
-### Recipe 6 — Streamline room light template (UI-mode)
-
-**Block 1 — Add to `streamline_templates.yaml`:**
-```yaml
-room_light_button:
-  default:
-    - icon: mdi:ceiling-light
-    - button_type: slider
-    - card_layout: large
-  card:
-    type: custom:bubble-card
-    card_type: button
-    button_type: '[[button_type]]'
-    entity: '[[entity]]'
-    name: '[[name]]'
-    icon: '[[icon]]'
-    card_layout: '[[card_layout]]'
-    light_slider_type: brightness
-    button_action:
-      tap_action:
-        action: toggle
-      hold_action:
-        action: more-info
-
-room_cover_button:
-  card:
-    type: custom:bubble-card
-    card_type: cover
-    entity: '[[entity]]'
-    name: '[[name]]'
-    icon_open: '[[icon_open]]'
-    icon_close: '[[icon_close]]'
-    card_layout: large
-
-room_climate_button:
-  default:
-    - min_temp: 15
-    - max_temp: 28
-    - step: 0.5
-  card:
-    type: custom:bubble-card
-    card_type: climate
-    entity: '[[entity]]'
-    name: '[[name]]'
-    card_layout: large
-    state_color: true
-    min_temp: '[[min_temp]]'
-    max_temp: '[[max_temp]]'
-    step: '[[step]]'
-```
-
-**Block 2 — Card usage in dashboard:**
-```yaml
-# Ceiling light — uses all defaults (slider, large)
-- type: custom:streamline-card
-  template: room_light_button
-  variables:
-    - entity: light.living_room_ceiling
-    - name: Ceiling
-
-# Floor lamp — override to switch
-- type: custom:streamline-card
-  template: room_light_button
-  variables:
-    - entity: light.living_room_floor_lamp
-    - name: Floor Lamp
-    - icon: mdi:floor-lamp
-    - button_type: switch
-
-# Cover
-- type: custom:streamline-card
-  template: room_cover_button
-  variables:
-    - entity: cover.living_room_blinds
-    - name: Blinds
-    - icon_open: mdi:blinds-open
-    - icon_close: mdi:blinds
-
-# Climate
-- type: custom:streamline-card
-  template: room_climate_button
-  variables:
-    - entity: climate.living_room
-    - name: Thermostat
-```
-
----
-
 ## §8 Pitfalls & Pre-Output Checklist
 
 > **Something broken?** Go to `references/troubleshooting-ref.md` first — symptom → cause → fix tables.
@@ -1644,44 +905,16 @@ room_climate_button:
 
 ### Cross-skill handoffs
 
-When a dashboard request bleeds into automation or helper territory, hand off
-cleanly rather than refusing or ignoring the need.
+| Request type | This skill | ha-yaml skill |
+|---|---|---|
+| Button `tap_action` (navigate / call-service on existing entity) | ✓ Generate it | — |
+| Automation triggered by button press or state change | Tell user to use ha-yaml; provide entity_id + desired action + service | ✓ |
+| Template sensor needed for a card display value | Generate card with `sensor.placeholder_name` + comment | ✓ Create the sensor |
+| Timer, sequence, condition logic behind a button | navigate tap_action only | ✓ Everything else |
 
-**Dashboard button → Automation (hand off to ha-yaml):**
+When handing off to ha-yaml, always provide: entity_id to trigger from, desired action, service to call (e.g. `scene.turn_on`).
+When a card needs a template sensor, use `sensor.placeholder_name` with comment `# Replace with template sensor from ha-yaml skill`.
 
-Tell the user:
-> "The dashboard button's `tap_action` navigates to the pop-up or calls a
-> service directly — I'll generate that. For the automation that runs when the
-> button is pressed (e.g. triggering a scene or script), use the ha-yaml skill
-> with this context:"
-
-Provide the ha-yaml skill with:
-```
-Entity to trigger from: [entity_id of the button entity or input_boolean]
-Desired action: [what should happen]
-Service to call: [e.g. scene.turn_on, script.turn_on, light.turn_on]
-```
-
-**Dashboard card → Template sensor (hand off to ha-yaml):**
-
-When a card needs a value that doesn't exist as an entity (e.g. "count of
-lights on", "time since last motion"):
-
-Tell the user:
-> "This display requires a template sensor. I'll generate the dashboard card
-> using a placeholder entity ID — use the ha-yaml skill to create the sensor,
-> then replace the placeholder."
-
-Provide the placeholder in the card YAML as `sensor.placeholder_name` with a
-comment: `# Replace with template sensor from ha-yaml skill`.
-
-**Dashboard automation trigger → ha-yaml:**
-
-Navigate tap_action is this skill's domain. Everything triggered BY a state
-change belongs to ha-yaml:
-- `tap_action: navigate` → this skill generates it
-- `tap_action: call-service` on existing entities → this skill generates it
-- "When I press this button, run a 2-minute timer then turn off the lights" → ha-yaml
 
 ### Additional pitfall reference
 
@@ -1690,21 +923,7 @@ That table covers the most frequent failure modes in one place.
 
 ### Performance notes
 
-- Pop-up content renders lazily — do not put always-on live sensors in pop-ups
-  expecting them to update in the background. They update on pop-up open.
-  **v3.2.1 improvement:** cards outside the visible area of a pop-up now update
-  more intelligently by default. Manual `background_update: true` is no longer
-  required in most cases — remove it from cards if you added it in earlier versions,
-  as it may now cause redundant updates.
-- `cover_background: true` on media-player cards fetches album art on every
-  state change — avoid using it on dashboards with many simultaneous media
-  players.
-- `auto_order: true` on HBS requires PIR sensors with frequent state changes
-  to work well. Without sensors, set `auto_order: false` to avoid unexpected
-  reordering.
-- Streamline `_javascript` keys re-evaluate on every state change. Keep
-  JS template logic minimal — complex expressions in `cards_javascript` can
-  cause noticeable render lag on low-powered devices (Raspberry Pi 3/4).
+> See `bubble-card-ref.md#version-compat` for pop-up lazy-loading, `background_update` deprecation, cover_background, auto_order, and Streamline JS performance notes.
 
 ## §9 Health-Check Mode
 
@@ -1713,450 +932,6 @@ That table covers the most frequent failure modes in one place.
 > "review my YAML", or similar.
 > **Do not trigger** for new dashboard generation — use §2#full-dashboard-workflow.
 
-Health-check mode audits existing YAML and returns a prioritised findings list.
-Work with whatever YAML is provided. Start immediately — do not ask scoping
-questions upfront. Note incomplete coverage at the end if the YAML appears partial.
-
----
-
-### Step 1 — Complete the structured parse first
-
-**Before generating any findings**, fill in this parse template mentally.
-This forces full structural reading before conclusions — reduces false positives
-and missed findings.
-
-```
-PARSE PASS — complete before generating findings:
-
-View structure:
-  View type: [sections / masonry / panel / unspecified]
-  max_columns: [value or MISSING]
-  theme: [view-level / card-level / missing]
-  Top-level cards: [count and types — pop-ups, HBS, other]
-  HBS present: [yes/no] — position: [last / not last / missing]
-  Sections count: [N]
-  Pop-up count: [N]
-  Pop-up hashes: [list all hash: values found]
-  Navigation targets: [list all navigation_path: '#...' values found]
-
-Cross-reference check:
-  Every navigation_path: '#hash' has a matching pop-up hash: '#hash'? [yes/no/partial]
-  Every HBS N_link: '/lovelace/path' is a valid view path? [yes/no/unknown]
-
-Colour scan:
-  Hardcoded hex (#rrggbb) on colour properties: [yes/no — list locations]
-  Hardcoded rgb()/rgba(): [yes/no — list locations]
-  Hardcoded named colours on colour properties: [yes/no — list locations]
-  var(--...) chains present: [yes/no]
-
-Performance flags:
-  background_update: true found: [yes/no — list entities]
-  rise_animation: true found: [yes/no]
-
-Entity scan (interactive cards only — button_type: switch/slider or toggle tap_action):
-  binary_sensor.* on interactive card: [list]
-  sensor.* on interactive card: [list]
-  automation-territory patterns: [list]
-
-Card count per view (if multiple views present):
-  [View name]: [N cards / N sections]
-
-Chip bar present: [yes/no — mushroom-chips-card or sub-buttons chip strip]
-
-Pop-up format:
-  hash: present on all pop-ups: [yes/no]
-  open_popup: true found (deprecated): [yes/no]
-  with_bottom_offset: true when HBS present: [yes/no]
-
-THEN generate findings from this completed parse.
-```
-
----
-
-### Step 2 — Structural patterns — correct vs incorrect
-
-Use these reference patterns during the parse pass. YAML indentation determines
-structure — read indentation carefully before flagging placement issues.
-
-**Pop-up placement — Critical if wrong:**
-```yaml
-# CORRECT — pop-up as top-level card (indentation level 1 under cards:)
-cards:
-  - type: custom:bubble-card      # ← top-level
-    card_type: pop-up
-    hash: '#living-room'
-  sections:
-    - type: grid
-      cards:
-        - type: custom:bubble-card
-          card_type: button        # ← inside sections: correct
-
-# WRONG — pop-up inside sections: (indentation level 3+ under cards:)
-cards:
-  sections:
-    - type: grid
-      cards:
-        - type: custom:bubble-card  # ← inside sections: WRONG for pop-ups
-          card_type: pop-up
-```
-
-**HBS placement — Significant if wrong:**
-```yaml
-# CORRECT — HBS last top-level card
-cards:
-  - card_type: pop-up             # pop-ups first
-  - card_type: pop-up
-  sections: [...]
-  - card_type: horizontal-buttons-stack  # ← LAST
-
-# WRONG — HBS not last
-cards:
-  - card_type: horizontal-buttons-stack  # ← not last
-  - card_type: pop-up
-  sections: [...]
-```
-
-**Theme placement — Significant if on individual cards:**
-```yaml
-# CORRECT — theme at view level
-- title: Overview
-  theme: Casa5HeyneV2            # ← view level
-  cards: [...]
-
-# WRONG — theme on individual card
-- type: custom:bubble-card
-  theme: Casa5HeyneV2            # ← card level: Significant finding
-```
-
-**Colour values — Critical if hardcoded on colour properties:**
-```yaml
-# CORRECT — var() chain
-styles: |
-  .bubble-button { background: var(--accent-color); }
-
-# WRONG — hardcoded hex
-styles: |
-  .bubble-button { background: #D9BE8B; }   # ← Critical
-
-# WRONG — hardcoded RGB
-styles: |
-  .bubble-button { color: rgb(217, 190, 139); }  # ← Critical
-```
-
-**Pop-up format — Significant if old format:**
-```yaml
-# CORRECT — v3.2+ format
-- type: custom:bubble-card
-  card_type: pop-up
-  hash: '#living-room'           # ← required in v3.2+
-  width_desktop: "560px"
-  with_bottom_offset: true
-
-# WRONG — pre-v3.2 format
-- type: custom:bubble-card
-  card_type: pop-up
-  open_popup: true               # ← deprecated: Significant finding
-  entity: light.living_room      # ← entity on pop-up root: check v3.2 compat
-```
-
-**Navigation cross-reference — Significant if broken:**
-```yaml
-# CORRECT — button hash matches pop-up hash
-- card_type: button
-  button_action:
-    tap_action:
-      navigation_path: '#living-room'   # ← must match ↓
-
-- card_type: pop-up
-  hash: '#living-room'                  # ← matched: correct
-
-# WRONG — broken navigation reference
-- card_type: button
-  tap_action:
-    navigation_path: '#bedroom'         # ← no matching pop-up hash: broken link
-```
-
----
-
-### Step 3 — Colour scan exclusions
-
-**Do NOT flag as hardcoded colour:**
-```
-- YAML comment lines:          # this is a comment with #hex values
-- Entity IDs:                  entity: binary_sensor.front_door_0abc
-- Icon values:                 icon: mdi:home-variant
-- Pop-up hash values:          hash: '#living-room'
-- Navigation paths:            navigation_path: '#bedroom'
-- HBS link values:             1_link: /lovelace/overview
-- Anchor references:           &anchor or *anchor
-- HA service names:            service: light.turn_on
-- Template strings:            value_template: "{{ '#' ~ state }}"
-```
-
-**DO flag as hardcoded colour** — only when the property name is colour-related:
-```
-Colour property names to scan:
-  color, colour, background, background-color, fill, stroke,
-  border-color, box-shadow, text-color, icon-color,
-  --bubble-*, --mush-*, --ha-*  (CSS variable overrides with hardcoded values)
-
-Pattern: [colour-property]: "#[0-9a-fA-F]{3,6}"   → Critical
-Pattern: [colour-property]: "rgb(...)"              → Critical
-Pattern: [colour-property]: "rgba(...)"             → Critical
-Pattern: [colour-property]: "[named colour]"        → Critical
-  Named colours to catch: red, blue, green, yellow, orange, purple,
-                           white, black, grey, gray, gold, amber
-```
-
-**Borderline cases — do not flag:**
-```
-icon_color: "amber"    → this is a Mushroom semantic colour token, not hardcoded
-icon_color: "red"      → same — Mushroom uses named tokens: do not flag
-  Exception: if inside a styles: | CSS block → flag it
-```
-
----
-
-### Step 4 — Entity scan rules
-
-**Only flag interactive cards** — not read-only state displays:
-
-```
-INTERACTIVE (flag if automation-territory entity):
-  button_type: switch
-  button_type: slider
-  tap_action: action: toggle
-  tap_action: action: call-service (service: light.turn_on / switch.toggle etc.)
-
-NOT INTERACTIVE (do not flag — read-only display):
-  button_type: state
-  tap_action: action: none
-  tap_action: action: more-info
-  show_state: true (alone, without toggle action)
-```
-
-**Automation-territory entity patterns:**
-```
-binary_sensor.*_motion     → Advisory — automation trigger, not a control
-binary_sensor.*_presence   → Advisory — automation trigger
-binary_sensor.*_occupancy  → Advisory — automation trigger
-binary_sensor.*_door       → Advisory — state display at most, not a button
-binary_sensor.*_window     → Advisory — state display at most
-binary_sensor.*_contact    → Advisory — state display at most
-sensor.*_temperature       → Advisory if interactive — sensors are read-only
-sensor.*_humidity          → Advisory if interactive
-sensor.*_power             → Advisory if interactive
-sensor.*_energy            → Advisory if interactive
-```
-
-**Do not flag:**
-```
-binary_sensor.*_lock       → legitimate interactive control (lock state)
-binary_sensor.*_alarm      → legitimate interactive control
-input_boolean.*            → always legitimate — these are designed for manual control
-input_select.*             → always legitimate
-input_number.*             → always legitimate
-```
-
----
-
-### Step 5 — Engagement-type mixing detection
-
-For each view in the pasted YAML, classify the card types present:
-
-```
-Complications (passive):
-  mushroom-chips-card, sub-buttons (chip strip), sensor state cards,
-  weather card, picture-glance
-
-Brief interaction (one tap):
-  bubble-card button, bubble-card media-player, bubble-card pop-up trigger,
-  scene buttons, input_boolean switches
-
-Deep engagement (multi-step):
-  history-graph, statistics-graph, logbook, mini-graph-card,
-  energy-distribution, automation list, config link cards,
-  number input cards, select cards
-```
-
-**Flag as Significant** when a single view contains cards from more than one
-engagement tier — especially Brief interaction mixed with Deep engagement.
-
-**Do not flag** the Overview view for having both Complications and
-Brief interaction chips — chip-level brief interaction (weather tap → more-info)
-is acceptable on an otherwise passive view. Flag only when full interactive
-controls (room buttons, switches) appear alongside history graphs or config cards.
-
----
-
-### Finding categories and severity
-
-**Critical — fix before using**
-Functionality broken or Iron Law violated.
-
-| Finding | Source |
-|---|---|
-| `type: masonry` or no view type | Outdated view type |
-| Pop-up inside `sections:` | Structural placement bug |
-| Hardcoded hex / rgb on colour property | Iron Law violation |
-| Pop-up missing `hash:` | Pop-up cannot open |
-| `open_popup: true` on pop-up | Deprecated pre-v3.2 format |
-| Broken navigation cross-reference | Dead link — button goes nowhere |
-
-**Significant — fix soon**
-UX materially degraded or behaviour unreliable.
-
-| Finding | Source |
-|---|---|
-| HBS not last top-level card | HBS positioning rule |
-| `background_update: true` on non-realtime entity | Performance |
-| Mixed engagement types on one view | Engagement-type model |
-| `theme:` set on individual cards | Theme architecture |
-| `with_bottom_offset` missing when HBS present | Pop-up overlap |
-| Old pop-up format (`open_popup: true`) | Version compat |
-
-**Advisory — consider improving**
-Improvement opportunities — never prescriptive.
-
-| Finding | Source |
-|---|---|
-| Interactive card on automation-territory entity | Automate-first |
-| No chip bar / complications tier found | Engagement-type model |
-| `rise_animation: true` on likely fixed display | Wall panel best practice |
-| Section type not `grid` | Sections anatomy |
-| `column_span` not set on sections | Layout reliability |
-| `max_columns` not set on view | Device-type profile |
-| `name:` missing on cards | Accessibility / naming |
-| 5-view alignment opportunity | Optional restructure |
-
----
-
-
----
-
-### Output format
-
-Always deliver findings in this structure. Never free-form prose for findings.
-
-```
-## Dashboard Health Check
-
-[If partial YAML: "Note: auditing [N] cards / [N] views provided.
-Findings may be incomplete if this is a partial dashboard."]
-
----
-
-### 🔴 Critical ([N] findings)
-
-**[Finding title]**
-Where: [card name / view name / line context]
-Issue: [one sentence — what is wrong]
-Fix:
-  [specific YAML change or instruction]
-
-[repeat per Critical finding]
-
----
-
-### 🟡 Significant ([N] findings)
-
-**[Finding title]**
-Where: [card name / view name]
-Issue: [one sentence]
-Fix:
-  [specific YAML change or instruction]
-
-[repeat per Significant finding]
-
----
-
-### 🟢 Advisory ([N] findings)
-
-**[Finding title]**
-Where: [card name / view name / general]
-Issue: [one sentence]
-Suggestion:
-  [what to consider — not a command]
-
-[repeat per Advisory finding]
-
----
-
-### Summary
-
-[2–3 sentences: overall assessment, most important action to take first,
-and what is working well — always note what is correct, not only problems]
-
-[If applicable: "This dashboard maps well to the 5-view system —
-if you want to restructure, [specific suggestion for which views
-the existing content would move to]."]
-
-[If partial YAML: "To get a complete audit, paste the full dashboard YAML
-including all views and the HBS footer card."]
-```
-
----
-
-### Automate-first findings — tone guide
-
-When flagging an interactive card on an automation-territory entity, always:
-1. Name the entity and card specifically
-2. Note what it typically indicates
-3. Suggest the automation alternative neutrally
-4. Acknowledge the user may have a reason for it
-
-Example Advisory finding:
-```
-**Motion sensor on interactive card**
-Where: Living Room pop-up — switch card on binary_sensor.living_room_motion
-Issue: Motion sensors are typically automation triggers, not manual controls.
-Suggestion:
-  If this light is already motion-triggered, this card may be unnecessary.
-  Consider removing it and relying on the automation.
-  If you need a manual override, use input_boolean.override_motion_lights
-  as the card entity instead — hand off the boolean logic to ha-yaml.
-  (Keep the card if you have a specific reason for manual motion sensor control.)
-```
-
----
-
-### 5-view alignment — advisory only
-
-If the user's dashboard does not follow the 5-view structure, note it once
-at the end of the Advisory section — never as Critical or Significant.
-Frame it as an option, not a requirement.
-
-```
-**5-view system alignment opportunity**
-Where: Overall dashboard structure
-Issue: Current dashboard uses [N] view(s) with mixed purposes.
-Suggestion:
-  The 5-view system (Overview / Rooms / Scenes / Activity / Settings)
-  separates engagement types across dedicated views. Your current content
-  maps approximately as:
-    Overview → [list chips and state cards]
-    Rooms    → [list room buttons and pop-ups]
-    Settings → [list config and automation cards]
-  See references/dashboard-system.md for the full structure and
-  Recipes 7–12 for copy-paste scaffolds.
-  This is optional — your current structure is valid if it works for you.
-```
-
----
-
-### Partial YAML handling
-
-Never ask the user to provide more YAML before starting. Start immediately.
-
-After delivering findings, add one of these closers if the YAML appears partial:
-
-- Single pop-up only: "This audit covers one pop-up. Paste the full view
-  YAML to check view type, HBS placement, and chip bar presence."
-- Single view only: "This audit covers one view. Paste all views to check
-  cross-view engagement-type mixing and the 5-view alignment."
-- Full dashboard: no caveat needed.
-
-If the user then pastes more YAML, run a delta audit — only report new findings
-not already covered in the first pass.
-
----
+Read `references/health-check-ref.md` in full before proceeding.
+Complete the structured parse (Step 1) before generating any findings.
+Deliver findings using the output format in that file — never free-form prose.

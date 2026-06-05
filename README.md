@@ -27,22 +27,25 @@ This skill teaches Claude to generate complete, production-quality Lovelace YAML
 ```
 ha-bubble-dashboard/
 ├── README.md                           ← you are here
-├── SKILL.md                            ← main skill file (iron laws, process, §§1–8)
+├── SKILL.md                            ← main skill file (iron laws, process, §§1–9)
 ├── CHANGELOG.md                        ← version history and update triggers
 ├── available-skills-entry.md           ← system prompt entry for disk-based usage
 │
 ├── references/
-│   ├── bubble-card-ref.md              ← all card types, CSS vars, JS API, version compat
+│   ├── bubble-card-ref.md              ← all card types, CSS vars, JS API, version compat, performance
 │   ├── casa5heynev2-template.yaml      ← canonical base theme (copy + diff to generate variants)
 │   ├── colour-intelligence-ref.md      ← palette recipes, WCAG checks, advisory flow
 │   ├── css-theme-ref.md                ← full HA/Bubble var() chain catalogue
+│   ├── dashboard-system.md             ← 5-view architecture, workflow, device profiles, view YAML
+│   ├── health-check-ref.md             ← YAML audit: parse steps, finding categories, output format
 │   ├── mushroom-theme-ref.md           ← Mushroom ↔ HA integration, chip cards, template chip
-│   ├── recipes-extended.md             ← security, energy, vacuum, bathroom, garage, office
+│   ├── recipes-extended.md             ← room pop-up patterns (security, vacuum, bathroom…) + Recipes 1–6
+│   ├── recipes-5view.md                ← Recipes 7–14: 5-view scaffold + per-view card YAML
 │   ├── sidebar-ref.md                  ← all options, menu config, known issues
-│   ├── streamline-ref.md               ← template anatomy, variable syntax, JS keys
+│   ├── streamline-ref.md               ← template anatomy, variable syntax, JS keys, delivery format
 │   ├── test-dashboard.yaml             ← importable dashboard assembling core recipes
 │   ├── troubleshooting-ref.md          ← symptom → cause → fix tables
-│   └── typography-ref.md               ← font loading, recipes, wall-panel sizes
+│   └── typography-ref.md               ← font loading, recipes, wall-panel sizes, font-only update
 │
 └── theme/
     └── Casa5HeyneV2.yaml               ← the base theme — copy to /config/themes/
@@ -160,11 +163,11 @@ engagement). The classification is shown to the user for confirmation before
 any YAML is generated.
 
 See `references/dashboard-system.md` for the complete architecture and
-`references/recipes-extended.md` Recipes 7–14 for copy-paste YAML.
+`references/recipes-5view.md` for Recipes 7–14 copy-paste YAML.
 
 ## Version
 
-Current: **v1.2**  
+Current: **v1.3**  
 Component pins: Bubble Card 3.2.1 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0
 
 See `CHANGELOG.md` for full version history and update triggers.

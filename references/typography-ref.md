@@ -327,6 +327,36 @@ the font before rendering text. Use `swap` instead if you prefer instant
 render with a brief system-font flash.
 
 ---
+---
+
+## #font-only-update
+
+### Delivering font-only updates
+
+If the user only wants to change the font (not colours), deliver just the
+changed lines rather than a full theme file — less error-prone than replacing
+a 500-line file.
+
+```yaml
+# Changes to make in your existing theme file (mode-independent block):
+ha-font-family-body:    "NewFont, sans-serif"
+ha-font-family-heading: "NewFont, sans-serif"
+ha-font-family-code:    "NewFont, monospace"
+paper-font-common-base_-_font-family: "var(--primary-font-family)"
+paper-font-body1_-_font-family:       "var(--primary-font-family)"
+paper-font-subhead_-_font-family:     "var(--primary-font-family)"
+paper-font-headline_-_font-family:    "var(--primary-font-family)"
+paper-font-caption_-_font-family:     "var(--primary-font-family)"
+paper-font-title_-_font-family:       "var(--primary-font-family)"
+ha-card-header-font-family:           "var(--primary-font-family)"
+
+# Changes in modes.light AND modes.dark:
+primary-font-family: "NewFont, sans-serif"
+```
+
+Remind user: restart HA after adding `extra_module_url`, then hard-refresh browser.
+
+
 
 ## #swap-recipes
 

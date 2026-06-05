@@ -70,6 +70,36 @@ variables:
 - Use `element:` for picture-elements cards
 
 ---
+---
+
+## #delivery-format
+
+### Template delivery format
+
+Always deliver Streamline output in two clearly labelled blocks:
+
+**Block 1 — Add to `streamline_templates.yaml`:**
+```yaml
+my_template:
+  default:
+    - icon: mdi:ceiling-light
+  card:
+    type: custom:bubble-card
+    # ...
+```
+
+**Block 2 — Add to dashboard YAML (card usage):**
+```yaml
+type: custom:streamline-card
+template: my_template
+variables:
+  - entity: light.living_room
+  - name: Living Room
+```
+
+Remind user to clear browser cache after adding new templates.
+
+
 
 ## #variable-syntax
 

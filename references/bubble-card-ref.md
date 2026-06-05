@@ -20,6 +20,15 @@
 **Always generate v3.2+ formats.** Never generate the pre-v3.2 pop-up pattern (separate stack + pop-up card at the top of a view). Never reference `bubble-pop-up-fix.js`.
 
 ---
+**Performance notes:**
+- Pop-up content renders lazily — cards update on open, not in background. **v3.2.1+:** `background_update: true` is no longer required and may cause redundant updates — remove it from cards if added in earlier versions.
+- `cover_background: true` on media-player cards fetches album art on every state change — avoid on dashboards with many simultaneous media players.
+- `auto_order: true` on HBS requires PIR sensors to work well — set `auto_order: false` if no sensors present.
+- Streamline `_javascript` keys re-evaluate on every state change — keep JS logic minimal on low-powered devices (Raspberry Pi 3/4).
+
+---
+
+
 
 ## #pop-up
 
@@ -1113,3 +1122,21 @@ code: |
 | One-off override on a single card | `styles:` key in card YAML |
 | Dynamic CSS based on entity state | `styles:` with JS template |
 | Reusable AND configurable per card | Module with `variables:` |
+
+---
+
+## #touch-targets
+
+### Touch target sizing
+
+All interactive elements must meet minimum sizes for reliable tap accuracy:
+
+| Element | Minimum size | Bubble Card setting |
+|---------|--------------|---------------------|
+| HBS button | 48×48px | Default — do not reduce with CSS |
+| Sub-button (main) | 36×36px | Default |
+| Sub-button (bottom group) | 48px height | Set `custom_height: 48` if reducing |
+| Pop-up close button | 44×44px | Default — do not hide unless replacing |
+| Slider track | 44px tall hit area | Default |
+
+Never reduce icon or button sizes below these thresholds with custom CSS.

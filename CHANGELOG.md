@@ -1,5 +1,59 @@
 # ha-bubble-dashboard — Changelog
 
+
+## v1.3 — 2026-06-05
+
+### Architecture — token optimisation
+
+**SKILL.md reduced from 2162 → 937 lines (−57%).**
+All content preserved — reorganised for on-demand loading rather than always-in-context.
+
+**New reference files:**
+- `health-check-ref.md` — extracted from §9. Contains full parse template (Steps 1–5),
+  structural pattern examples, colour scan exclusions, entity scan rules, finding
+  categories, output format, tone guides, and partial YAML handling.
+- `recipes-5view.md` — extracted from `recipes-extended.md`. Contains Recipes 7–14:
+  5-view outer scaffold + per-view card YAML for Overview, Rooms, Scenes, Activity,
+  Settings, Energy extension, Music extension.
+
+**Content moved to existing reference files:**
+- `dashboard-system.md` — full-dashboard workflow (Steps 1–6), device-type profiles
+  table, sections view anatomy diagram, multi-view design rules, panel view.
+- `bubble-card-ref.md` — touch target sizing table, performance notes
+  (`background_update` deprecation, cover_background, auto_order, Streamline JS lag).
+- `typography-ref.md` — font-only update variable list (`ha-font-family-*`,
+  all `paper-font-*`, `primary-font-family`) with diff delivery format.
+- `streamline-ref.md` — two-block delivery format (Block 1: template, Block 2: usage).
+
+**`recipes-extended.md` restructured:**
+- Recipes 7–14 moved to `recipes-5view.md`
+- Core Recipes 1–6 (room pop-up, HBS, media player, climate, chip bar, Streamline)
+  retained alongside room pop-up patterns
+- Recipe 1–6 anchor format standardised to `## #anchor` style
+
+**SKILL.md changes:**
+- §2 UX Principles: Type B subsections (full-dashboard workflow, device-type profiles,
+  sections anatomy, multi-view design, panel view) replaced with compact summaries +
+  pointers; Type C subsections (progressive disclosure, touch targets, state colour,
+  mobile-first, information density) trimmed in place
+- §3b, §5, §6: compressed to route-only stubs pointing to reference files
+- §7: Recipe 0 retained inline; Recipes 1–6 pointer to `recipes-extended.md`;
+  Recipes 7–14 pointer to `recipes-5view.md`
+- §8: 4 redundant pitfall entries removed (covered by Iron Law); cross-skill
+  handoffs compressed to table; performance notes moved to `bubble-card-ref.md`
+- §9: replaced with 3-line pointer to `health-check-ref.md`
+- Stale text corrected: §2 header, §7 "same file" note, test-dashboard note,
+  triple blank lines collapsed
+
+### Fixes
+- Two content gaps identified and filled during cross-check against v1.2:
+  font-only update variable list (was missing from `typography-ref.md`),
+  Streamline two-block delivery format (was missing from `streamline-ref.md`)
+- Recipe 1–6 inline anchors `{#anchor}` converted to `## #anchor` format for
+  consistency with rest of skill
+
+---
+
 ---
 
 ## v1.2 — 2026-06-05
