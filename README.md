@@ -131,9 +131,40 @@ The skill includes a full colour intelligence layer:
 
 ---
 
+## The 5-view dashboard system
+
+v1.2 introduces a complete dashboard information architecture built on principled
+UX foundations. Every new full dashboard Claude generates follows this structure:
+
+| View | Purpose | Engagement type |
+|---|---|---|
+| Overview | What is happening right now | Complications — passive |
+| Rooms | What I want to control | Brief interaction |
+| Scenes | How I want the home to feel | Brief interaction |
+| Activity | What has happened | Passive review |
+| Settings | How the home is configured | Deep engagement |
+
+Two optional extension views — **Energy** and **Music** — are added when
+the user's home has those domains actively in use.
+
+The Activity view uses a unique **hide/show graph mechanism**: each of eight
+event categories (Presence, Doors & Windows, Motion, Automation, Energy,
+Maintenance, Devices, Infrastructure) shows a curated event card. Tapping the
+card reveals a pattern graph inline — no pop-ups, no navigation, no extra
+clutter.
+
+Before generating any full dashboard, Claude now runs a **classification
+workflow**: every entity is sorted into Bucket 0 (automate, don't build),
+Bucket 1 (complications), Bucket 2 (brief interaction), or Bucket 3 (deep
+engagement). The classification is shown to the user for confirmation before
+any YAML is generated.
+
+See `references/dashboard-system.md` for the complete architecture and
+`references/recipes-extended.md` Recipes 7–14 for copy-paste YAML.
+
 ## Version
 
-Current: **v1.5**  
+Current: **v1.2**  
 Component pins: Bubble Card 3.2.1 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0
 
 See `CHANGELOG.md` for full version history and update triggers.
