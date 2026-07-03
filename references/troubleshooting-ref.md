@@ -147,6 +147,7 @@ resources.
 | Pre-v3.2 → v3.2+ | Pop-up format completely changed | Pop-ups must be standalone top-level cards with `cards:` block. The UI shows a migration prompt — use it, then review generated YAML. |
 | Pre-v3.2 → v3.2+ | `bubble-pop-up-fix.js` removed | Remove any reference to this script from resources. |
 | Pre-v3.2 → v3.2+ | Pop-up modes added | Existing pop-ups get `popup_mode: default` automatically. Optionally migrate to `fit-content` or `centered` where appropriate. |
+| Pre-v3.2.4 → v3.2.4+ | Pop-ups nested in `vertical-stack`/`vertical-stack-in-card` were unreliable (create/edit/remove/duplicate/move could break) | Update to v3.2.4+ if this pattern is in use. No YAML change required — it's a rendering/editor fix. |
 
 **Migration checklist for v3.2+ upgrade:**
 - [ ] Run the in-UI migration (Dashboard → edit → HA prompts to migrate pop-ups)
@@ -154,6 +155,19 @@ resources.
 - [ ] Verify all pop-ups are now standalone top-level cards with `cards:` block
 - [ ] Check `subButtonIcon[N]` references if using JS templates with sub-buttons
 - [ ] Clear browser cache after migration
+
+---
+
+## #nested-popup-warning
+
+### Symptom: editor shows "Nested pop-ups are not supported" warning card, or a pop-up placed inside another pop-up doesn't render
+
+| Cause | Fix |
+|-------|-----|
+| A `card_type: pop-up` was added directly inside another pop-up's `cards:` block | Always unsupported, at every version. Move the inner pop-up out to be its own top-level card, and `navigate` to it (e.g. `tap_action: navigate, navigation_path: "#inner-hash"`) instead of nesting it. |
+| Pop-up nested inside `vertical-stack` / `vertical-stack-in-card` and behaving unreliably (not the warning card — a different symptom) | This is a v3.2.0–v3.2.3 bug, fixed in v3.2.4. Update Bubble Card. Not the same issue as true pop-up-in-pop-up nesting above, which is never supported. |
+
+Never generate YAML with a `pop-up` card inside another `pop-up`'s `cards:` array — use hash navigation between separate pop-ups instead.
 
 ---
 

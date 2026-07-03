@@ -19,6 +19,8 @@ This skill teaches Claude to generate complete, production-quality Lovelace YAML
 | **Colour intelligence** | WCAG contrast checks, harmony rules, 12 ready-made palette recipes |
 | **Typography** | font loading (CDN, self-hosted, system), wall-panel size overrides |
 | **Troubleshooting** | symptom → cause → fix tables for every common failure mode |
+| **Native HA interop** | native-first check vs custom builds, mixing native tile/heading cards, masonry→sections migration |
+| **Module authoring** | Bubble Card module editor schemas, object selector, sharing format, paid-module boundary |
 
 ---
 
@@ -38,6 +40,7 @@ ha-bubble-dashboard/
 │   ├── css-theme-ref.md                ← full HA/Bubble var() chain catalogue
 │   ├── dashboard-system.md             ← 5-view architecture, workflow, device profiles, view YAML
 │   ├── health-check-ref.md             ← YAML audit: parse steps, finding categories, output format
+│   ├── module-authoring-ref.md         ← Bubble Card module editor: field catalog, object selector, sharing format
 │   ├── mushroom-theme-ref.md           ← Mushroom ↔ HA integration, chip cards, template chip
 │   ├── recipes-extended.md             ← room pop-up patterns (security, vacuum, bathroom…) + Recipes 1–6
 │   ├── recipes-5view.md                ← Recipes 7–14: 5-view scaffold + per-view card YAML

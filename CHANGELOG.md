@@ -1,6 +1,179 @@
 # ha-bubble-dashboard — Changelog
 
 
+## Standing check — run on every HA minor release
+
+Monthly HA releases have repeatedly broken frontend assumptions (2026.5:
+editor fields + iOS pop-up DOM change; 2026.1: mobile navigation overhaul).
+On each HA minor release, verify before trusting the skill's guidance:
+
+- [ ] Pop-up rendering and visibility (sections-layout DOM changes)
+- [ ] Bubble Card editor fields present (HA form-schema changes)
+- [ ] Sidebar Card `showTopMenuOnMobile` / native mobile nav behaviour
+- [ ] Card-suggestion registration still functioning (HA 2026.6+ picker)
+- [ ] New native dashboard features that extend the `#native-first` table
+      (Maintenance/Security dashboards, tile card features, heading card)
+- [ ] Bubble Card / Streamline / Sidebar / Bubble Card Tools version pins
+
+---
+
+## v1.4 — 2026-07-03
+
+### Bubble Card version compatibility — v3.2.2 → v3.2.4
+
+Skill was pinned to Bubble Card v3.2.2; updated against actual v3.2.4 source
+(confirmed via `src/var/version.js` and official GitHub release notes for
+v3.2.3 and v3.2.4).
+
+**`bubble-card-ref.md`:**
+- `#version-compat` table: added v3.2.3 row (smart entity/card suggestions,
+  `close_action` fix for nested pop-up navigation, pop-up header colour-leak
+  fix, iOS pop-up-visibility fix) and v3.2.4 row (standalone pop-ups now work
+  reliably inside `vertical-stack`/`vertical-stack-in-card`; explicit editor
+  warning for true pop-up-in-pop-up nesting; module-editor object-selector
+  improvements for module developers — editor-only, not YAML-facing).
+- Source header updated from v3.2.2 to v3.2.4.
+- Added explicit rule: never nest a `card_type: pop-up` inside another
+  pop-up's `cards:` block — unsupported at every version.
+
+**`troubleshooting-ref.md`:**
+- New `#nested-popup-warning` section distinguishing two symptoms that look
+  similar but aren't: (1) true pop-up-in-pop-up nesting, always unsupported,
+  fix is to use hash navigation instead; (2) pop-up nested inside a
+  `vertical-stack`/`vertical-stack-in-card`, which was unreliable pre-v3.2.4
+  and just needs an update.
+- `#version-migration` table: added v3.2.4 row for the `vertical-stack-in-card`
+  fix.
+
+**`SKILL.md`:**
+- Added `#nested-popup-warning` to both the troubleshooting quick-route table
+  and the compact anchor list.
+
+**Verification performed:** full scan of all card `editor.js` schema files in
+actual (non-minified) v3.2.4 source against `bubble-card-ref.md` — no
+undocumented YAML-facing options found; all previously-documented options
+(`footer_mode`, `highlight_current_view`, `auto_order`, `close_by_clicking_outside`,
+etc.) confirmed accurate against source. No new card types, no new visibility
+condition types.
+
+**Considered and deferred:** a dedicated Bubble Card module-authoring skill —
+decided against as a separate skill; added as a reference file instead (below).
+
+### Module authoring — correctness fix + new reference file
+
+**Fixed factual errors in `bubble-card-ref.md#module-authoring`,** found by
+diffing the section against the actual (non-minified) v3.2.4 module-system
+source (`modules/parser.js`, `modules/utils.js`, `modules/export.js`):
+- Removed a `variables:` key + `{{mustache}}` interpolation pattern that does
+  not exist anywhere in Bubble Card's module system. The real mechanism is an
+  `editor:` key (HA form-selector schema array) read back via
+  `this.config.<module_id>?.<field_name>` inside the `code:` JS template —
+  same access pattern as a card's `styles:` key.
+- Removed `supported: [all]` — `'all'` is not a recognised literal anywhere in
+  `getAvailableCardTypes()`. Applying a module to every card type means
+  omitting `supported:` entirely.
+- Section shortened to a quick-start (structure + corrected examples) and now
+  points to the new `module-authoring-ref.md` for the full field catalog.
+
+**New `references/module-authoring-ref.md`** — built from Bubble Card's own
+bundled `src/modules/editor-schema-docs.md` (introduced alongside the v3.2.4
+object-selector PR #2489), restructured and condensed rather than reprinted
+verbatim:
+- Full `editor:` field-type catalog (selector-based fields grouped as basic
+  input / HA references / date-time / advanced, plus legacy type-based fields)
+- Object selector in full, including the v3.2.4 additions: `group`/`group_icon`,
+  `visible_if`/`warn_if`/`warn_text` (conditional fields), `variant_of`/`variant`
+  (mutually-exclusive alternatives collapsed into one dropdown), `cluster_of`
+  (visual-only grouping of independent fields)
+- Grid and expandable-section layout
+- A complete worked module example
+- Module distribution/sharing formats (`#sharing-a-module`), sourced from
+  `modules/export.js`'s `generateYamlExport`/`generateGitHubExport` — the
+  plain-YAML download format and the exact GitHub Discussion markdown format
+  the Module Store expects, with the quirks preserved (only the first
+  `editor:` field appears in the inline example; `supported:` omitted when
+  all cards apply; placeholder discussion link)
+
+**Routing:** added to `SKILL.md`'s top-level decision tree and both reference
+indexes. `bubble-card-ref.md#module-authoring` is read first for the module's
+top-level structure; `module-authoring-ref.md` is only pulled in for the
+`editor:` schema or the sharing/export format — keeping it out of context for
+ordinary dashboard-generation requests, per the on-demand loading pattern from
+v1.2→v1.3.
+
+### Redundancy pass — `#modules` vs `#module-authoring`
+
+Split ownership so each syntax pattern lives in exactly one place:
+- `#modules` now owns *applying/excluding* a module (`modules:` key,
+  `'!module_id'` exclusion) — trimmed its duplicate module-YAML-structure
+  example, added a pointer to `#module-authoring` for writing one.
+- `#module-authoring` now owns *writing* a module — dropped its duplicate
+  "applying a module to a card" example, replaced with a one-line pointer
+  back to `#modules`.
+- Net: both sections shorter, no content lost, no pattern duplicated.
+
+**`bubble_card_tools` version confirmed still current at `1.0.2`.**
+
+---
+
+
+### Full-scope review — structural optimisation + ecosystem alignment (2026-07-03)
+
+**Structural (token footprint + one-source-of-truth):**
+- Deleted `references/dashboard-recipes.md` (~50 KB) — verified 100% duplicate
+  of content inside `dashboard-system.md`, referenced nowhere. Cross-check:
+  chunk-level containment scan, 0 unique chunks.
+- Deduplicated `dashboard-system.md#view-overview` and `#view-rooms`: full
+  YAML removed (the refined copies in `recipes-5view.md` Recipes 8–9 are the
+  single source), sections rewritten as design rationale + component notes +
+  pointer. Cross-check: component/entity coverage scan confirmed Recipes 8–9
+  are supersets; the one divergent placeholder (`sensor.lights_on_count` vs
+  `binary_sensor.any_light_on`) noted in prose. Scenes/Activity/Settings/
+  Energy/Music scaffolds intentionally remain in dashboard-system.md — their
+  recipes summarise patterns and point here; that division is by design.
+
+**Ecosystem alignment (researched against HA 2026.1–2026.7 release notes):**
+- New `dashboard-system.md#native-first` — the native-first check (parallel
+  to automate-first): battery grids → Maintenance dashboard, security logs →
+  Security Activity list, weather forecasts → weather tile features, media
+  transport → media tile features. Plus "when is a custom Bubble dashboard
+  worth it?" positioning vs the native Home dashboard (default since 2026.2)
+  and hybrid-setup guidance. Advisory tone throughout.
+- New `dashboard-system.md#native-interop` — mixing native tile/heading/area
+  cards into Bubble layouts: what inherits from the Casa5HeyneV2 theme, what
+  doesn't (--bubble-* vars, modules), when native wins, visual grouping rules.
+- New `health-check-ref.md` native-feature advisory category (Advisory only).
+- New `streamline-ref.md#maintenance-status` — honest project-health note
+  (single maintainer, decluttering-card lineage, graceful degradation path).
+- New paid-module boundary rule in `module-authoring-ref.md#sharing-a-module`
+  + Common Pitfalls row: never reproduce Patreon module code; explain, route,
+  or author an original module instead.
+
+**New capabilities:**
+- `dashboard-system.md#entity-inventory` — Developer Tools → Template snippet
+  producing an area-grouped, device-class-annotated entity list for the
+  Collect step (one-off evaluation, within Iron Law scope).
+- `dashboard-system.md#masonry-migration` — masonry → sections migration
+  guide: don't-convert-in-place workflow, construct mapping table,
+  card_layout re-check, verification pointers.
+- `dashboard-system.md#wall-panel-hardening` — advisory notes: burn-in,
+  screen-off automation handoff, kiosk-mode/Fully Kiosk pointers (named, not
+  configured), dedicated non-admin user, stale-cache reliability.
+
+**Routing & metadata:**
+- SKILL.md: process-tree routes for masonry migration and native interop;
+  §2 "Native first" subsection; Collect/Classify steps extended; two new
+  Common Pitfalls rows; §8 Scope checklist items (native-first advisory,
+  no paid-module reproduction); §6 project-health pointer; anchor lists
+  updated; frontmatter TRIGGERS/SYMPTOMS extended; `ha_checked: 2026.7`.
+- README: file tree completed (module-authoring-ref.md), coverage table
+  extended (native interop, module authoring).
+- available-skills-entry.md: new triggers (masonry migration, native-vs-
+  custom decisions) and symptoms (rebuilding native features without
+  advisory, reproducing paid module code).
+- CHANGELOG: standing per-HA-release verification checklist added (above).
+
+
 ## v1.3 — 2026-06-05
 
 ### Architecture — token optimisation

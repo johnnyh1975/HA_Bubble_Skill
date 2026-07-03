@@ -3,17 +3,18 @@ name: ha-bubble-dashboard
 description: >
   Home Assistant dashboard design with Bubble Card 3.x, Streamline Card, Sidebar Card and Mushroom — including a merged HA/Bubble/Mushroom CSS theme with colour intelligence, palette recipes, WCAG checks, typography, wall-panel support and full troubleshooting.
   
-  TRIGGERS: Bubble Card (any card type), Lovelace dashboards, CSS themes, colour palettes, fonts, Streamline templates, Sidebar Card nav, Mushroom chips, room pop-ups, wall panels, troubleshooting.
+  TRIGGERS: Bubble Card (any card type), Lovelace dashboards, CSS themes, colour palettes, fonts, Streamline templates, Sidebar Card nav, Mushroom chips, room pop-ups, wall panels, masonry→sections migration, native-vs-custom dashboard decisions, troubleshooting.
   
-  SYMPTOMS: hardcodes hex in YAML · uses pre-v3.2 pop-up format · places pop-up or HBS inside sections: · generates themes from scratch · uses masonry view · skips UI-mode question for Streamline · omits JS font loader · generates automations instead of navigate actions.
+  SYMPTOMS: hardcodes hex in YAML · uses pre-v3.2 pop-up format · places pop-up or HBS inside sections: · generates themes from scratch · uses masonry view · skips UI-mode question for Streamline · omits JS font loader · generates automations instead of navigate actions · rebuilds native HA features without advisory · reproduces paid Patreon module code.
 
 metadata:
-  version: 1.3
-  bubble_card: "3.2.1"   # 3.2.2 is a patch on top; 3.2.1 is the stable base
+  version: 1.4
+  bubble_card: "3.2.4"
   streamline_card: "0.2.2"
   sidebar_card: "0.1.9.9"
-  bubble_card_tools: "1.0.2"
+  bubble_card_tools: "1.0.2"   # confirmed current — checked 2026-07-03
   ha_minimum: "2024.3.0"
+  ha_checked: "2026.7"        # guidance verified against HA release notes up to 2026.7
 ---
 
 # HA Dashboard UX
@@ -55,6 +56,10 @@ User request
     │                                     Ask: wall panel? → single-mode
     ├── "review/audit/health check/     → §9 Health-Check Mode — parse YAML,
     │    what's wrong with my YAML?"      deliver findings immediately, no upfront questions
+    ├── masonry → sections migration?   → dashboard-system.md#masonry-migration
+    ├── write/edit a Bubble Card        → bubble-card-ref.md#module-authoring first
+    │    module or its editor form?       (structure), then module-authoring-ref.md
+    │                                     (field catalog, object selector, sharing format)
     └── card / dashboard / navigation?  → continue ↓
 
 Identify output type
@@ -66,7 +71,10 @@ Identify output type
   ├── Sidebar Card     → sidebar-ref.md#known-issues + #combined-example
   ├── Streamline       → ask UI-mode or YAML-mode first, then streamline-ref.md
   ├── Room pop-up      → check recipes-extended.md for matching room type
+  ├── Native tile / heading / area
+  │    card in a Bubble layout?    → dashboard-system.md#native-interop
   └── Full dashboard   → §2#full-dashboard-workflow (classify first, then generate)
+                         Run automate-first + native-first checks (§2)
                          Ask: wall panel? → single-mode + size overrides
                          5-view system → dashboard-system.md → Recipes 7–14 (recipes-5view.md)
 
@@ -89,6 +97,7 @@ Generate → checklist (§8) → deliver
 | HBS not reordering | `#hbs-not-ordering` |
 | Layout wrong | `#sections-layout-issues` |
 | Font not loading | `typography-ref.md#font-troubleshooting` |
+| Nested pop-up warning / pop-up-in-pop-up | `#nested-popup-warning` |
 | Unknown | `#general-diagnostic-checklist` |
 
 ---
@@ -111,6 +120,8 @@ Generate → checklist (§8) → deliver
 | "I'll generate automations for this dashboard button" | STOP. Send the user to ha-yaml for the automation. Only generate the navigate tap_action here. |
 | "A button card is fine for this fan/vacuum/lock" | CHECK. Use bubble-card-ref.md#entity-domain-map first — complex domains need sub-button patterns, not a plain switch button. |
 | "I'll add a card for every device I have" | STOP. Ask whether automation already handles it. The dashboard is for what automation cannot do — every unnecessary card competes for attention with the ones that matter. |
+| "I'll build a battery grid / security log / weather forecast section" | CHECK FIRST. Native HA covers these since 2026.5/2026.6 (Maintenance dashboard, Security Activity list, weather + media tile features). Raise as Advisory — see dashboard-system.md#native-first. |
+| "The user wants Bubble Weather / Badges 2 — I'll recreate it" | STOP. Paid Patreon modules are never reproduced. Explain, route to the Module Store/Patreon, or author an original module instead (module-authoring-ref.md). |
 
 ---
 
@@ -121,6 +132,14 @@ Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 **bubble-card-ref.md** — any Bubble Card YAML:
 `#version-compat`★ · `#pop-up` · `#button` · `#sub-buttons` · `#horizontal-buttons-stack` · `#media-player` · `#climate` · `#cover` · `#select` · `#separator` · `#calendar` · `#sub-buttons-only` · `#css-variables` · `#js-templates` · `#modules` · `#module-authoring` · `#actions` · `#entity-domain-map`★
 
+**module-authoring-ref.md** — writing a Bubble Card module's `editor:` schema,
+or packaging/sharing a module: `#basic-structure` · `#field-properties` ·
+`#field-types` · `#condition-selector` · `#object-selector`★ (groups /
+conditional fields / variants) · `#advanced-structure` · `#legacy-fields` ·
+`#best-practices` · `#complete-example` · `#sharing-a-module`. Read
+bubble-card-ref.md#module-authoring first for the module's top-level structure
+— this file is only the `editor:` field catalog and the export format.
+
 **css-theme-ref.md** — theme colour YAML:
 `#var-chain`★ · `#ha-vars` · `#bubble-vars` · `#light-mode` · `#dark-mode` · `#how-to-swap-accent` · `#full-palette-swap` · `#theme-file-structure` · `#mushroom-vars` · `#app-header-vars` · `#font-size-vars`
 
@@ -128,7 +147,7 @@ Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 `#architecture`★ · `#loading-methods` · `#ha-variables` · `#size-system` · `#alexandria` · `#font-only-update` · `#swap-recipes` · `#single-mode-themes` · `#font-troubleshooting`
 
 **streamline-ref.md** — Streamline templates:
-`#ui-mode-vs-yaml-mode`★ · `#template-anatomy` · `#variable-syntax` · `#javascript-keys` · `#dry-decision` · `#file-organisation` (incl. `!include` tag + background revalidation) · `#known-limitations` · `#bubble-card-interaction`
+`#maintenance-status` · `#ui-mode-vs-yaml-mode`★ · `#template-anatomy` · `#variable-syntax` · `#javascript-keys` · `#dry-decision` · `#file-organisation` (incl. `!include` tag + background revalidation) · `#known-limitations` · `#bubble-card-interaction`
 
 **sidebar-ref.md** — Sidebar Card config:
 `#known-issues`★ · `#installation` · `#main-options` · `#width-breakpoints` · `#sidebar-menu` · `#template-messages` · `#style` · `#bottom-card` · `#combined-example`
@@ -144,10 +163,10 @@ Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 **test-dashboard.yaml** — complete importable dashboard assembling Recipes 0–5. Recipes 1–6 are in `recipes-extended.md`. Use to verify YAML validity or as a starter dashboard.
 
 **troubleshooting-ref.md** — when something is broken:
-`#cache-issues`★ · `#theme-not-applying` · `#popup-not-opening` · `#streamline-not-found` · `#sidebar-not-showing` · `#bubble-styling-ignored` · `#version-migration` · `#hbs-not-ordering` · `#sections-layout-issues` · `#sub-buttons-not-showing` · `#card-state-stale` · `#font-not-loading` · `#popup-z-index` · `#cardmod-overflow-clipping` · `#general-diagnostic-checklist`★
+`#cache-issues`★ · `#theme-not-applying` · `#popup-not-opening` · `#streamline-not-found` · `#sidebar-not-showing` · `#bubble-styling-ignored` · `#version-migration` · `#hbs-not-ordering` · `#sections-layout-issues` · `#sub-buttons-not-showing` · `#card-state-stale` · `#font-not-loading` · `#popup-z-index` · `#cardmod-overflow-clipping` · `#nested-popup-warning` · `#general-diagnostic-checklist`★
 
-**dashboard-system.md** — architecture, workflow, device profiles, view YAML:
-`#system-overview`★ · `#navigation-layer` · `#classification-output` · `#full-dashboard-workflow` · `#device-type-profiles` · `#sections-anatomy` · `#multi-view-design` · `#panel-view` · `#view-overview` · `#view-rooms` · `#view-scenes` · `#view-activity` · `#view-settings` · `#extension-energy` · `#extension-music`
+**dashboard-system.md** — architecture, workflow, native-first check, device profiles, migration, view scaffolds:
+`#system-overview`★ · `#native-first` · `#navigation-layer` · `#classification-output` · `#full-dashboard-workflow` · `#entity-inventory` · `#device-type-profiles` · `#wall-panel-hardening` · `#sections-anatomy` · `#multi-view-design` · `#panel-view` · `#masonry-migration` · `#native-interop` · `#view-overview` · `#view-rooms` · `#view-scenes` · `#view-activity` · `#view-settings` · `#extension-energy` · `#extension-music`
 
 **recipes-extended.md** — room pop-up patterns + core recipes 1–6:
 `#security-popup` · `#energy-view` · `#vacuum-popup` · `#presence-panel` · `#bathroom-popup` · `#garage-popup` · `#office-popup` · `#streamline-templates-extended` · `#recipe-1-room-popup` · `#recipe-2-hbs` · `#recipe-3-media-player` · `#recipe-4-climate` · `#recipe-5-chip-bar` · `#recipe-6-streamline`
@@ -287,6 +306,21 @@ silently to produce a well-structured result without debate.
 
 ---
 
+### Native first
+
+**Don't rebuild what the platform now ships.** Native HA dashboards have
+grown substantially through 2026: the Home dashboard is the default for new
+installs, the Maintenance dashboard covers battery states, the Security
+dashboard has an Activity list, and the weather and media-player tiles now
+carry forecast and full transport features. Before building a custom section
+for any of these, raise the native option — Advisory tone, user decides.
+
+Full table, positioning guidance ("when is a custom Bubble dashboard worth
+it?") and hybrid-setup notes: `dashboard-system.md#native-first`.
+Mixing native cards into a Bubble layout: `dashboard-system.md#native-interop`.
+
+---
+
 ### The engagement-type model
 
 The right question for every card is not "how important is this device?" but
@@ -316,8 +350,8 @@ the 5-view system has exactly one engagement type — this is why the system wor
 > Read `dashboard-system.md#full-dashboard-workflow` for the complete 6-step process (Collect → Classify → Present → Profile → Generate → Offer).
 
 Steps in brief:
-1. **Collect** — entity list, primary device, fixed display?
-2. **Classify** — sort every entity into Bucket 0 (automate) / 1 (complications) / 2 (brief interaction) / 3 (deep engagement). Full bucket definitions: `dashboard-system.md#full-dashboard-workflow`.
+1. **Collect** — entity list (offer the Developer Tools snippet: `dashboard-system.md#entity-inventory`), primary device, fixed display?
+2. **Classify** — sort every entity into Bucket 0 (automate) / 1 (complications) / 2 (brief interaction) / 3 (deep engagement). Full bucket definitions: `dashboard-system.md#full-dashboard-workflow`. Apply the native-first check (`dashboard-system.md#native-first`) to Bucket 3 candidates.
 3. **Present** — show classification to user before writing any YAML. Never refuse based on it — user has final say.
 4. **Profile** — apply device-type profile (`dashboard-system.md#device-type-profiles`)
 5. **Generate** — map buckets to 5-view structure (`dashboard-system.md#classification-output`)
@@ -337,7 +371,7 @@ Steps in brief:
 | e-ink | 2 | large | 16px↑ | HBS only | Single-mode light |
 | Phone + desktop | 3 | large | 14px | HBS + sidebar (hidden mobile) | Both |
 
-Wall tablet / e-ink → always ask single-mode. Wall tablet font bump → also set Mushroom sizes separately (`typography-ref.md#size-system`).
+Wall tablet / e-ink → always ask single-mode. Wall tablet font bump → also set Mushroom sizes separately (`typography-ref.md#size-system`). Kiosk/burn-in/reliability advisories: `dashboard-system.md#wall-panel-hardening`.
 
 ---
 
@@ -693,6 +727,7 @@ Pair with HBS footer for mobile. Set `is_sidebar_hidden: true` on HBS when Sideb
 ## §6 Streamline Card
 
 > **Always read first:** `streamline-ref.md#ui-mode-vs-yaml-mode` — must ask before generating
+> **Project health note:** `streamline-ref.md#maintenance-status` — recommend only when the DRY case is real
 > **Then:** `streamline-ref.md#template-anatomy` → `#variable-syntax` → `#dry-decision`
 > **JS templates:** `streamline-ref.md#javascript-keys` — [[variable]] substitution-before-evaluation gotcha
 > **Delivery format:** `streamline-ref.md#delivery-format` — always two labelled blocks (template + usage)
@@ -902,6 +937,8 @@ views:
 - [ ] No automations generated — navigate tap_action only
 - [ ] No helpers or template sensors generated
 - [ ] Out-of-scope items redirected to `ha-yaml` or `ha-best-practices`
+- [ ] Native-first check raised (Advisory) for battery / security-log / weather-forecast / media-transport content
+- [ ] No paid Patreon module code reproduced — original modules only
 
 ### Cross-skill handoffs
 

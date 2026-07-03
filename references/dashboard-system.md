@@ -37,6 +37,57 @@ daily attention.
 
 ---
 
+## #native-first
+
+### The native-first check
+
+Home Assistant's built-in dashboards have converged on much of this skill's
+philosophy. As of HA 2026.2 the new Home dashboard ("Overview") is the default
+for all new installations — summary cards, favourites and area views with no
+YAML at all. HA 2026.5 added a native Maintenance dashboard (battery states
+for every device in one overview), an Activity list on the Security dashboard
+(state-change log for locks and sensors), customisable Overview summaries and
+the Shortcut card. HA 2026.6 rebuilt the add-card dialog around entities and
+added forecast features to the weather tile plus a full set of media-player
+tile features (source picker, sound mode, mute, reorderable playback buttons).
+
+**The rule, parallel to automate-first:** before building a custom section,
+check whether native HA already provides it. Building UI the platform ships
+for free adds maintenance surface without adding capability — the same logic
+that says a motion-triggered light does not need a card.
+
+| Before building this… | …check this native feature first |
+|---|---|
+| Battery grid (Settings / Activity view) | Maintenance dashboard (HA 2026.5+) |
+| Security / door event log | Security dashboard → Activity list (HA 2026.5+) |
+| Weather forecast pop-up or graph | Weather tile forecast features (HA 2026.6+) |
+| Full media transport controls | Media player tile features (HA 2026.5/2026.6+) |
+| Generic "everything" dashboard | Native Home dashboard — may be enough |
+
+**Tone:** always Advisory. Present the native option, state the trade-off,
+and let the user decide. Never refuse to build the custom version.
+
+### When is a custom Bubble dashboard worth it?
+
+The native Home dashboard is auto-generated and generic. A custom Bubble
+build earns its maintenance cost when the user wants:
+
+- **Curation** — the engagement-type model: only what automation cannot
+  handle, structured by interaction type. Native shows everything by area.
+- **Progressive disclosure** — room pop-ups, HBS footer navigation, the
+  5-view system. Native has no equivalent to pop-up-based room control.
+- **Identity** — the Casa5HeyneV2 theme, custom typography, wall-panel
+  single-mode designs. Native styling is fixed.
+- **Fixed displays** — kiosk and wall-panel layouts (`#device-type-profiles`,
+  `#wall-panel-hardening`). Native layouts are not designed for this.
+
+If none of these apply — the user just wants "a dashboard" — say so honestly:
+the native default plus a few favourites may serve them better than a custom
+build they must maintain. Hybrid setups (native Home dashboard for daily use,
+one custom Bubble wall-panel view) are valid and common.
+
+---
+
 ## #navigation-layer
 
 ### Navigation: Sidebar Card + HBS footer
@@ -192,6 +243,12 @@ everything."
 If the user says "build something typical" with no entities → use Recipe 0
 placeholder entities and note that.
 
+**Producing the entity list — offer this snippet** (see `#entity-inventory`):
+if the user has HA open, the fastest way to collect a complete, area-grouped
+inventory is a one-off template evaluation — not a template sensor, so it
+stays within this skill's scope.
+
+
 **Step 2 — Classify**
 
 Sort every entity into one of four buckets before writing any YAML.
@@ -281,6 +338,40 @@ Offer two things, briefly:
 
 ---
 
+## #entity-inventory
+
+### Entity inventory snippet — the Collect step, made easy
+
+Paste this into **Developer Tools → Template**, then copy the output back
+into the conversation. It is a one-off evaluation — nothing is created or
+saved in HA.
+
+```jinja2
+{%- for area in areas() %}
+## {{ area_name(area) }}
+{%- for eid in area_entities(area) %}
+{%- set d = eid.split('.')[0] %}
+{%- if d in ['light','switch','climate','cover','fan','media_player',
+             'vacuum','lock','camera','alarm_control_panel','humidifier',
+             'scene','script','person','binary_sensor','sensor',
+             'input_boolean','input_select','select'] %}
+- {{ eid }}{% if state_attr(eid,'device_class') %} ({{ state_attr(eid,'device_class') }}){% endif %}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+```
+
+**Notes:**
+- Output is grouped by HA area — rooms come for free if areas are assigned.
+- Entities with no area do not appear; ask the user to mention anything
+  missing ("anything important not in the list?").
+- `device_class` is included where set — it improves Bucket 0 classification
+  (motion, door, window, power…).
+- If the list is very long, ask the user to trim domains they know they
+  don't want on a dashboard before classification.
+
+---
+
 ## #device-type-profiles
 
 ### Device-type profiles
@@ -307,6 +398,39 @@ mush-card-primary-font-size:   "15px"
 mush-card-secondary-font-size: "13px"
 mush-chip-font-size:           "0.35em"
 ```
+
+---
+
+## #wall-panel-hardening
+
+### Wall-panel & kiosk hardening — advisory notes
+
+These points are advisory and mostly outside YAML generation scope — raise
+them when a wall-panel or kiosk profile is selected, then let the user decide.
+
+**Display protection:**
+- OLED / AMOLED panels: prefer a dark single-mode theme and avoid static
+  high-contrast elements that never move (large white chip bars, permanent
+  bright separators). LCD panels are far less burn-in prone.
+- Schedule the screen off when the room is unoccupied — a device automation
+  (via the companion app or Fully Kiosk) is the calm-tech answer and doubles
+  as burn-in protection. Hand off the automation itself to ha-yaml.
+
+**Kiosk behaviour:**
+- Hiding the HA header and sidebar on a fixed display is usually done with
+  the community `kiosk-mode` frontend module (HACS) or the kiosk settings of
+  Fully Kiosk Browser on Android panels. Both are outside this skill's YAML
+  scope — name them, don't configure them.
+- Use a dedicated non-admin HA user for the panel: it prevents accidental
+  edits and limits what a guest can reach from the device.
+
+**Reliability:**
+- After HA updates, wall panels are the devices most likely to show stale
+  cached frontend code — a scheduled nightly browser restart (Fully Kiosk
+  supports this) avoids most of it. Symptoms and fixes:
+  `troubleshooting-ref.md#cache-issues`.
+- Motion-sensitivity rules for always-on displays (no long animations, no
+  `rise_animation`) are in SKILL.md §2 Accessibility and apply here in full.
 
 ---
 
@@ -419,6 +543,91 @@ views:
 
 ---
 
+## #masonry-migration
+
+### Masonry → sections migration guide
+
+For users with an old masonry dashboard (the pre-2024 default, or any view
+with no `type:` set) who want the sections layout this skill targets.
+
+**Step 0 — don't convert in place.** Create a new view (`type: sections`) in
+the same dashboard, migrate into it, verify, then delete the old view. The
+old view stays functional throughout.
+
+**Step 1 — take stock of the old view:**
+- Pop-ups: any format — old stack-based pop-ups must also migrate to the
+  v3.2+ standalone format (`bubble-card-ref.md#version-compat`).
+- HBS footer: note its position — it moves to last top-level card.
+- `vertical-stack` / `horizontal-stack` groupings — these become sections.
+- Conditional cards — unchanged, they work identically in sections.
+
+**Step 2 — mapping table:**
+
+| Masonry construct | Sections equivalent |
+|---|---|
+| Implicit column flow | `type: grid` sections + `column_span` |
+| `vertical-stack` group | One grid section containing the same cards |
+| `horizontal-stack` (≤2 cards) | Cards side-by-side in a grid section |
+| `horizontal-stack` (3+ cards) | Split — wrapping is unpredictable on mobile |
+| Pop-up inside a stack | Standalone pop-up, top-level `cards:` entry |
+| HBS anywhere | Last top-level `cards:` entry |
+| `view_layout` options | Remove — replaced by `column_span` / `max_columns` |
+
+**Step 3 — re-check `card_layout`.** In sections view, Bubble Cards default
+to `large` — cards that looked right as `normal` in masonry may render
+differently. Apply the card_layout decision guide (SKILL.md §4) per card
+rather than carrying old values blindly.
+
+**Step 4 — set `max_columns`** per the device-type profile, then verify with
+the §8 pre-output checklist. Layout problems after migration:
+`troubleshooting-ref.md#sections-layout-issues`.
+
+---
+
+## #native-interop
+
+### Mixing native cards into a Bubble dashboard
+
+Native HA cards (tile, heading, area, weather, media control) can sit inside
+the same sections as Bubble Cards. This is often the right call when a native
+tile feature covers the need — see `#native-first`.
+
+**What inherits from the Casa5HeyneV2 theme automatically:** native cards
+read the standard HA theme variables the theme already defines — card
+background, `ha-card-border-radius`, primary/secondary text colours, the font
+stack and the state colour tokens. A native tile dropped into a Bubble
+dashboard picks up the palette and typography without any extra work.
+
+**What does NOT apply to native cards:** `--bubble-*` variables, Bubble Card
+modules, and Bubble `styles:` blocks. Do not attempt to restyle native cards
+with Bubble mechanisms; if a native card needs adjustment beyond what the
+theme provides, that is a signal to use the Bubble equivalent instead.
+
+**When the native card is the better pick:**
+
+- **Weather with forecast** — the weather tile's temperature / precipitation
+  forecast features (HA 2026.6+) replace any custom forecast construction.
+  Never rebuild a forecast with sub-buttons.
+- **Media player with full transport** — media tile features (HA 2026.5/2026.6+)
+  cover source, sound mode, mute and reorderable buttons. The Bubble
+  media-player card remains the pick for pop-up contexts and visual
+  consistency in room pop-ups; the tile wins for a dedicated media section.
+- **Section anchors with status** — the native heading card supports badges
+  and buttons with visibility conditions (HA 2026.2+); the Bubble separator
+  remains the default inside pop-ups.
+
+**Visual consistency rules:**
+
+1. Group native cards in their own section rows rather than interleaving them
+   card-by-card with Bubble Cards — shape language differs slightly (tile
+   icon disc vs Bubble icon circle) and grouping keeps this deliberate.
+2. Keep the engagement-type rule: a native tile with controls belongs on a
+   brief-interaction surface, not on the Overview view.
+3. All colour still comes from the theme — the Iron Law applies to native
+   cards too. No hardcoded hex in native card YAML.
+
+---
+
 ## #view-overview
 
 ### View 1 — Overview
@@ -436,196 +645,28 @@ views:
 [HBS footer]                   ← last card, always
 ```
 
-**Chip bar (full-width section):**
-```yaml
-- type: grid
-  column_span: 3
-  cards:
-    - type: custom:mushroom-chips-card
-      chips:
-        - type: weather
-          entity: weather.home
-          show_conditions: true
-          show_temperature: true
-          tap_action:
-            action: more-info
+**Copy-paste YAML:** `recipes-5view.md#recipe-8-overview` — the single source
+for this view's card YAML. Do not reconstruct it from this section.
 
-        - type: entity
-          entity: sensor.outdoor_temperature    # REPLACE
-          content_info: state
-          icon: mdi:thermometer
-          tap_action:
-            action: none
+**Component design notes:**
 
-        - type: entity
-          entity: person.alice                  # REPLACE — repeat per person
-          content_info: name
-          tap_action:
-            action: more-info
-
-        - type: entity
-          entity: alarm_control_panel.home      # REPLACE
-          content_info: state
-          icon: mdi:shield-home
-          tap_action:
-            action: more-info
-
-        - type: template
-          icon: mdi:lightbulb
-          content: >
-            {% set n = states.light
-               | selectattr('state','eq','on') | list | count %}
-            {{ n }} light{{ 's' if n != 1 }}
-          icon_color: >
-            {% set n = states.light
-               | selectattr('state','eq','on') | list | count %}
-            {{ 'amber' if n > 0 else 'grey' }}
-          tap_action:
-            action: none
-
-        - type: entity
-          entity: sensor.current_power          # REPLACE — optional
-          content_info: state
-          icon: mdi:flash
-          tap_action:
-            action: none
-```
-
-**Alert strip (conditionally visible):**
-
-Requires `input_boolean.home_alerts_active` — set to `on` by an automation
-when any alert condition is true. Hand off to ha-yaml skill for the automation.
-
-```yaml
-- type: conditional
-  conditions:
-    - condition: state
-      entity: input_boolean.home_alerts_active   # REPLACE — create via ha-yaml
-      state: "on"
-  card:
-    type: grid
-    column_span: 3
-    cards:
-      - type: custom:bubble-card
-        card_type: separator
-        name: Alerts
-        icon: mdi:alert
-        # styles: accent colour for separator when alerts active
-        styles: |
-          .bubble-separator { background: var(--warning-color); }
-
-      - type: custom:bubble-card
-        card_type: button
-        button_type: state
-        entity: binary_sensor.front_door         # REPLACE — repeat per alert
-        name: Front Door
-        icon: mdi:door-open
-        show_state: true
-        card_layout: normal
-        button_action:
-          tap_action:
-            action: none
-```
-
-**Per-room status grid:**
-
-State-only cards — `tap_action: none`. One card per room. Sub-buttons show
-temperature and motion state. The room button's active state (accent colour)
-shows when lights are on — no interaction needed to read it.
-
-```yaml
-- type: grid
-  column_span: 3
-  cards:
-    - type: custom:bubble-card
-      card_type: separator
-      name: Home Status
-      icon: mdi:home
-
-    - type: custom:bubble-card
-      card_type: button
-      button_type: state
-      name: Living Room
-      icon: mdi:sofa
-      entity: light.living_room_group           # REPLACE
-      show_state: false
-      card_layout: normal
-      button_action:
-        tap_action:
-          action: none                          # Overview = no controls
-      sub_button:
-        main:
-          - entity: sensor.living_room_temperature  # REPLACE
-            show_state: true
-            show_icon: true
-            icon: mdi:thermometer
-            show_background: false
-          - entity: binary_sensor.living_room_motion  # REPLACE
-            show_state: false
-            show_icon: true
-            icon: mdi:motion-sensor
-            show_background: true
-            state_background: true
-
-    # REPLACE: repeat for each room
-    - type: custom:bubble-card
-      card_type: button
-      button_type: state
-      name: Kitchen
-      icon: mdi:chef-hat
-      entity: light.kitchen_group               # REPLACE
-      show_state: false
-      card_layout: normal
-      button_action:
-        tap_action:
-          action: none
-```
-
-**Away mode panel (conditionally visible):**
-
-Shown when no person entity is `home`. Replaces the per-room grid visually
-when the house is empty. The per-room grid is still rendered but the away
-panel draws the eye first when visible.
-
-```yaml
-- type: conditional
-  conditions:
-    - condition: template
-      value_template: >
-        {{ states.person | selectattr('state','eq','home')
-           | list | count == 0 }}
-  card:
-    type: grid
-    column_span: 3
-    cards:
-      - type: custom:bubble-card
-        card_type: separator
-        name: Away
-        icon: mdi:home-export-outline
-
-      - type: custom:bubble-card
-        card_type: button
-        button_type: state
-        entity: alarm_control_panel.home        # REPLACE
-        name: Security
-        show_state: true
-        card_layout: normal
-        button_action:
-          tap_action:
-            action: none
-
-      - type: custom:bubble-card
-        card_type: button
-        button_type: state
-        entity: sensor.lights_on_count          # REPLACE — template sensor
-        name: Lights
-        icon: mdi:lightbulb
-        show_state: true
-        card_layout: normal
-        button_action:
-          tap_action:
-            action: none
-```
+- **Chip bar** (full-width section) — weather, outdoor temperature, one chip
+  per person, alarm state, a template chip counting lights on (amber when > 0),
+  and optionally current power. Every chip is `tap_action: none` or `more-info`
+  — never a control.
+- **Alert strip** — conditionally visible via `input_boolean.home_alerts_active`,
+  set to `on` by an automation when any alert condition is true (hand off to
+  ha-yaml for the automation). Hidden entirely when all clear — the calmest
+  alert is the one that isn't there.
+- **Per-room status grid** — state-only cards, `tap_action: none`, one card per
+  room. Sub-buttons show temperature and motion state. The room button's active
+  state (accent colour) shows when lights are on — no interaction needed to
+  read it.
+- **Away mode panel** — conditionally visible when no `person` entity is
+  `home`. The per-room grid is still rendered, but the away panel draws the
+  eye first when visible. Shows security state and a lights summary
+  (template sensor via ha-yaml — the recipe uses `binary_sensor.any_light_on`
+  as the placeholder).
 
 ---
 
@@ -646,163 +687,18 @@ panel draws the eye first when visible.
 [HBS footer]                   ← last top-level card
 ```
 
-**Complete Rooms view scaffold:**
-```yaml
-- title: Rooms
-  path: rooms
-  type: sections
-  max_columns: 3
-  cards:
+**Copy-paste YAML:** `recipes-5view.md#recipe-9-rooms` — the single source
+for this view's card YAML (room buttons, pop-ups, and HBS footer). Do not
+reconstruct it from this section.
 
-    # ── Pop-ups — top-level, before sections ────────────────
-    - type: custom:bubble-card
-      card_type: pop-up
-      hash: '#living-room'
-      name: Living Room
-      icon: mdi:sofa
-      entity: light.living_room_group           # REPLACE
-      width_desktop: "560px"
-      with_bottom_offset: true
-      cards:
-        # Use Recipe 1 pattern — see §7 in SKILL.md
-        # Use recipes-extended.md for bathroom, garage, security, vacuum
+**Component design notes:**
 
-    - type: custom:bubble-card
-      card_type: pop-up
-      hash: '#kitchen'
-      name: Kitchen
-      icon: mdi:chef-hat
-      entity: light.kitchen_group               # REPLACE
-      width_desktop: "560px"
-      with_bottom_offset: true
-      cards:
-        # Recipe 1 pattern
-
-    # REPLACE: add one pop-up per room
-
-    # ── Sections ────────────────────────────────────────────
-    sections:
-
-      # Active rooms chip bar
-      - type: grid
-        column_span: 3
-        cards:
-          - type: custom:bubble-card
-            card_type: sub-buttons
-            hide_main_background: true
-            sub_button:
-              bottom:
-                - name: Active
-                  buttons_layout: inline
-                  justify_content: flex-start
-                  group:
-                    - entity: light.living_room_group   # REPLACE
-                      show_name: true
-                      name: Living Room
-                      show_state: false
-                      show_icon: true
-                      fill_width: false
-                      show_background: true
-                      state_background: true
-                    - entity: light.kitchen_group       # REPLACE
-                      show_name: true
-                      name: Kitchen
-                      show_state: false
-                      show_icon: true
-                      fill_width: false
-                      show_background: true
-                      state_background: true
-                    # REPLACE: add chip per room
-
-      # Room button grid
-      - type: grid
-        column_span: 2
-        cards:
-          - type: custom:bubble-card
-            card_type: button
-            button_type: name
-            name: Living Room
-            icon: mdi:sofa
-            entity: light.living_room_group     # REPLACE
-            card_layout: large
-            button_action:
-              tap_action:
-                action: navigate
-                navigation_path: '#living-room'
-            sub_button:
-              main:
-                - entity: sensor.living_room_temperature  # REPLACE
-                  show_state: true
-                  show_icon: true
-                  show_background: false
-
-          - type: custom:bubble-card
-            card_type: button
-            button_type: name
-            name: Kitchen
-            icon: mdi:chef-hat
-            entity: light.kitchen_group         # REPLACE
-            card_layout: large
-            button_action:
-              tap_action:
-                action: navigate
-                navigation_path: '#kitchen'
-
-          # REPLACE: add one button per room
-
-      # Quick actions bar
-      - type: grid
-        column_span: 3
-        cards:
-          - type: custom:bubble-card
-            card_type: separator
-            name: Quick Actions
-            icon: mdi:lightning-bolt
-
-          - type: custom:bubble-card
-            card_type: button
-            button_type: name
-            name: All Lights Off
-            icon: mdi:lightbulb-off
-            card_layout: normal
-            button_action:
-              tap_action:
-                action: call-service
-                service: light.turn_off
-                data:
-                  entity_id: all
-
-          - type: custom:bubble-card
-            card_type: button
-            button_type: name
-            name: Away Mode
-            icon: mdi:home-export-outline
-            card_layout: normal
-            button_action:
-              tap_action:
-                action: call-service
-                service: scene.turn_on
-                target:
-                  entity_id: scene.away           # REPLACE
-
-          - type: custom:bubble-card
-            card_type: button
-            button_type: name
-            name: Good Night
-            icon: mdi:weather-night
-            card_layout: normal
-            button_action:
-              tap_action:
-                action: call-service
-                service: scene.turn_on
-                target:
-                  entity_id: scene.good_night     # REPLACE
-
-    # ── HBS footer — last top-level card ────────────────────
-    - type: custom:bubble-card
-      card_type: horizontal-buttons-stack
-      # ... (see #navigation-layer for full HBS nav config)
-```
+- One `card_layout: large` button per room, tap navigates to the room's
+  pop-up hash. Pop-ups are top-level `cards:` entries — never inside sections.
+- Room pop-up content follows Recipe 1 and the room-type patterns in
+  `recipes-extended.md` (security, vacuum, bathroom, garage, office…).
+- This is the only view where brief-interaction controls live — Overview
+  stays passive, deep-engagement content goes to Activity/Settings.
 
 ---
 

@@ -99,7 +99,8 @@ theme through `var()` chains — zero hardcoded hex in any card YAML.
 ### Recipe 8 — Overview view cards
 
 Replace the `cards: []` in the Overview view from Recipe 7 with this content.
-Full detail with design rationale in `dashboard-system.md#view-overview`.
+Design rationale and component notes in `dashboard-system.md#view-overview`.
+This recipe is the single source for the Overview view YAML.
 
 ```yaml
 cards:
@@ -321,7 +322,8 @@ cards:
 
 Replace the `cards: []` in the Rooms view from Recipe 7 with this content.
 Add one pop-up and one room button per room.
-Full detail in `dashboard-system.md#view-rooms`.
+Design rationale in `dashboard-system.md#view-rooms`.
+This recipe is the single source for the Rooms view YAML.
 
 ```yaml
 cards:

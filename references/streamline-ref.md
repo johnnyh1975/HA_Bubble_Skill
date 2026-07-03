@@ -4,6 +4,28 @@
 
 ---
 
+## #maintenance-status
+
+### Project health — read before recommending
+
+Streamline Card is a single-maintainer adaptation of the unmaintained
+decluttering-card, with a small user base and a slowly growing open-issue
+backlog. It is functional and in the default HACS catalogue, but it is not
+in the same maintenance league as Bubble Card.
+
+**Practical consequences:**
+- Recommend it where the DRY case is real (`#dry-decision` — 3+ identical
+  structures), not by default. Templates add a dependency and a debugging
+  layer; for 1–2 repeats, plain YAML is the calmer choice.
+- Degradation path is graceful: if the card ever breaks on a future HA
+  release, every template can be expanded back to plain card YAML — nothing
+  in the dashboard architecture depends on Streamline structurally.
+- Note that HA's own direction (entity-first card picker, richer tile card
+  features since 2026.5/2026.6) is steadily reducing the amount of repeated
+  custom YAML that needs templating in the first place.
+
+---
+
 ## #ui-mode-vs-yaml-mode
 
 ### Critical: ask before generating template config

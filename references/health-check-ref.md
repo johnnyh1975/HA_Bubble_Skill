@@ -281,6 +281,25 @@ controls (room buttons, switches) appear alongside history graphs or config card
 
 ---
 
+### Native-feature advisories
+
+Flag these as **Advisory only** — the custom construction works; native HA
+now provides the same capability with zero maintenance (see
+`dashboard-system.md#native-first`):
+
+```
+Battery-level card grid            → native Maintenance dashboard (HA 2026.5+)
+Security / door event log section  → Security dashboard Activity list (HA 2026.5+)
+Custom weather forecast build      → weather tile forecast features (HA 2026.6+)
+Rebuilt media transport controls   → media player tile features (HA 2026.5/2026.6+)
+```
+
+Wording pattern: "This works as built. Since HA 2026.x the native <feature>
+covers this with no YAML to maintain — worth considering if you don't need
+the custom styling." Never mark these Critical or Significant.
+
+---
+
 ### Finding categories and severity
 
 **Critical — fix before using**

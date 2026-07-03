@@ -2,7 +2,7 @@
 # ha-bubble-dashboard skill — Phase 3
 # Covers: all card types, CSS variables, JS template API,
 #         module workflow, version compatibility.
-# Source: Bubble Card v3.2.2 README + release notes v3.0–v3.2
+# Source: Bubble Card v3.2.4 README + release notes v3.0–v3.2.4
 
 ---
 
@@ -16,8 +16,10 @@
 | v3.1.0 | Bubble Card Tools becomes recommended module backend. New `card_type: sub-buttons`. Sub-button types: default/slider/select. New `main`/`bottom` sub-button schema. **`subButtonIcon[]` index reordering: bottom sub-buttons indexed first, main sub-buttons after.** | JS templates using `subButtonIcon[N]` for main sub-buttons will be wrong unless reindexed. |
 | v3.2.0 | **Pop-ups fully reworked as standalone cards with `cards:` block.** Pop-up content no longer lives in a separate stack. `bubble-pop-up-fix.js` removed entirely. New pop-up modes: `fit-content`, `centered`, `adaptive-dialog`. UI migration prompt shown. | All pre-v3.2 pop-up YAML is invalid. Always generate v3.2 standalone format. |
 | v3.2.2 | Bug fixes: empty column height, migration scoping, climate `swing_horizontal_mode`. Stable. | None. |
+| v3.2.3 | Smart entity/card suggestions in the editor (HA 2026.6 integration, editor UX only). `close_action` now fires only on manual pop-up close, not during navigation between pop-ups — fixes nested pop-up navigation. Fixed pop-up header background-color leaking onto child cards. Fixed pop-ups staying visible on iOS due to an HA 2026.5.x sections-layout DOM change. | No YAML changes. If troubleshooting nested-pop-up navigation, confirm the user is on v3.2.3+. |
+| v3.2.4 | **Standalone pop-ups nested inside `vertical-stack` / `vertical-stack-in-card` now work correctly** (create, edit, remove, duplicate, move) — this pattern was broken/unreliable in v3.2.0–v3.2.3. Editor now shows an explicit "Nested pop-ups are not supported" warning card if a pop-up is placed inside another pop-up's own `cards:` block (this was always unsupported, just silent before). Improved module-editor object selector for module developers (groups, conditionals, variants — editor UI only, not YAML-facing). Various perf/cleanup fixes for pop-up DOM lifecycle. | If a recipe wraps a Bubble pop-up inside `vertical-stack`/`vertical-stack-in-card`, note it requires v3.2.4+. Never generate a pop-up nested inside another pop-up's `cards:` — this remains unsupported at every version. |
 
-**Always generate v3.2+ formats.** Never generate the pre-v3.2 pop-up pattern (separate stack + pop-up card at the top of a view). Never reference `bubble-pop-up-fix.js`.
+**Always generate v3.2+ formats.** Never generate the pre-v3.2 pop-up pattern (separate stack + pop-up card at the top of a view). Never reference `bubble-pop-up-fix.js`. Never nest a `card_type: pop-up` inside another pop-up's `cards:` block — always unsupported, and v3.2.4+ surfaces an explicit editor warning for it.
 
 ---
 **Performance notes:**
@@ -812,6 +814,9 @@ Mixing order causes the CSS to be treated as JS and breaks both.
 
 Modules are reusable CSS/JS templates applied across multiple cards.
 Stored as YAML files in `/config/bubble_card/modules/` (requires Bubble Card Tools).
+**To write a module, see `#module-authoring` below** (and `module-authoring-ref.md`
+for the full `editor:` field catalog and sharing format) — this section covers
+only applying an existing module to a card.
 
 **Applying via YAML:**
 ```yaml
@@ -827,22 +832,6 @@ modules:
 ```yaml
 modules:
   - '!global_module_id'
-```
-
-**Module YAML structure (in bubble_card/modules/):**
-```yaml
-my_module_id:
-  name: "My Module Name"
-  version: "1.0"
-  creator: "YourName"
-  supported:
-    - button
-    - pop-up
-  is_global: false
-  code: |
-    ha-card {
-      --bubble-border-radius: 20px;
-    }
 ```
 
 **The "HA default styling" module** (from Module Store) applies HA theme styling
@@ -1014,10 +1003,13 @@ step: 0.5
 
 ## #module-authoring
 
-### Writing Bubble Card modules — complete guide
+### Writing Bubble Card modules — quick reference
 
 Modules are reusable CSS/JS applied across cards. They live in
 `/config/bubble_card/modules/` as `.yaml` files (requires Bubble Card Tools).
+**For the full field-type catalog, the object selector (groups/conditionals/
+variants), grid/expandable layout, and the module-sharing/export format, see
+`module-authoring-ref.md`.**
 
 **Complete module YAML structure:**
 
@@ -1028,23 +1020,24 @@ my_module_id:
   description: "What this module does"
   version: "1.0"
   creator: "YourName"
+  link: ""            # optional — URL to a GitHub discussion or source
   supported:
-    # List card types this module applies to. Options:
-    # button | pop-up | climate | cover | media-player
-    # select | separator | calendar | sub-buttons |
-    # horizontal-buttons-stack | all
+    # List card types this module applies to. Omit entirely to apply
+    # to ALL card types — there is no "all" literal value.
+    # button | calendar | climate | cover | horizontal-buttons-stack |
+    # media-player | pop-up | select | separator | sub-buttons
     - button
     - pop-up
   is_global: false    # true = auto-applies to ALL supported cards
                       # false = only applies when explicitly listed
-  variables:          # optional — user-configurable values
+  editor:              # optional — user-configurable fields (HA form-selector schema)
     - name: radius
       label: "Border radius"
-      default: "16px"
-      type: text
+      selector:
+        number: { min: 0, max: 40, unit_of_measurement: "px" }
   code: |
     ha-card {
-      --bubble-border-radius: {{radius}};
+      --bubble-border-radius: ${this.config.my_module_id?.radius || 16}px;
       border: 1px solid var(--divider-color) !important;
     }
     .bubble-icon-container {
@@ -1052,14 +1045,21 @@ my_module_id:
     }
 ```
 
+**Config values are read in `code:` via `this.config.<module_id>?.<field_name>`** —
+this is a JS template literal (same template API as a card's `styles:` key: `hass`,
+`entity`, `state`, `icon`, `subButtonState`, `subButtonIcon`, `getWeatherIcon`, `card`,
+`name`, `checkConditionsMet`). There is **no `variables:` key and no `{{mustache}}`
+interpolation syntax** — that pattern does not exist in Bubble Card's module system.
+Always use optional chaining (`?.`) since the module may not be configured yet, and
+provide a fallback with `||` where sensible.
+
 **Global module pattern — apply across all buttons:**
 ```yaml
 ha_default_bridge:
   name: "HA Theme Bridge"
   description: "Ensures Bubble Card inherits HA theme colours"
   version: "1.0"
-  supported:
-    - all
+  # No 'supported:' key — omitting it applies the module to every card type.
   is_global: true
   code: |
     ha-card {
@@ -1086,42 +1086,35 @@ light_card_style:
     }
 ```
 
-**Applying a module to a card:**
-```yaml
-type: custom:bubble-card
-card_type: button
-entity: light.living_room
-modules:
-  - light_card_style           # scoped module
-  - '!ha_default_bridge'       # exclude a global module from this card
-```
+**Applying the module to a card** uses the same `modules:` key covered in
+`#modules` above — e.g. `modules: [light_card_style, '!ha_default_bridge']`.
 
-**Module variable interpolation ({{variable}} syntax):**
+**User-configurable module (`editor:` + `this.config`, not `variables:`/`{{}}`):**
 ```yaml
 # In module definition
-variables:
+editor:
   - name: glow_color
     label: "Glow colour"
-    default: "var(--accent-color)"
-    type: text
+    selector:
+      ui_color: {}
 code: |
   ha-card {
-    box-shadow: 0 0 12px {{glow_color}} !important;
+    box-shadow: 0 0 12px ${this.config.my_module_id?.glow_color || 'var(--accent-color)'} !important;
   }
-
-# At use site (Bubble Card module editor or YAML)
-# Variables are set in the Module Store UI editor
 ```
+See `module-authoring-ref.md` for the full field-type catalog (text/number/
+boolean/select/color/icon/entity/condition/object/etc.), the object selector's
+groups/conditional-fields/variants, and grid/expandable layout.
 
 **When to use modules vs styles::**
 
 | Need | Use |
 |------|-----|
 | Same CSS on 5+ cards | Module (is_global: false) |
-| Same CSS on ALL cards of a type | Module (is_global: true) |
+| Same CSS on ALL cards of a type | Module (is_global: true, omit `supported:`) |
 | One-off override on a single card | `styles:` key in card YAML |
 | Dynamic CSS based on entity state | `styles:` with JS template |
-| Reusable AND configurable per card | Module with `variables:` |
+| Reusable AND configurable per card | Module with `editor:` |
 
 ---
 

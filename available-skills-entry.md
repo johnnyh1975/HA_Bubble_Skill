@@ -21,6 +21,9 @@ TRIGGER THIS SKILL WHEN:
 - Asking why Bubble Card or Mushroom colours don't reflect the HA theme
 - Creating room pop-ups, footer nav bars, or control panels
 - Wall-panel, kiosk, or fixed-display dashboard setup
+- Migrating an old masonry dashboard to the sections layout
+- Deciding between the native HA Home dashboard and a custom Bubble build,
+  or mixing native tile/heading cards into a Bubble dashboard
 - Any question about dashboard UX, layout, touch-target sizing, or accessibility
 - Troubleshooting: pop-up not opening, theme not applying, Streamline template
   not found, sidebar not showing, card styling being ignored, font not loading
@@ -40,6 +43,10 @@ SYMPTOMS (Claude is going wrong without this skill):
 - Using deprecated bubble-pop-up-fix.js or referencing it
 - Generating both light and dark mode without asking if display is fixed (wall panel)
 - Delivering a font change without the JS loader file and configuration.yaml entry
+- Rebuilding features native HA now ships (battery grid, security log, weather
+  forecast, media transport) without raising the native option as an advisory
+- Reproducing paid Patreon Bubble Card module code instead of routing to the
+  Module Store or authoring an original module
 </description>
 <location>
 /mnt/skills/user/ha-bubble-dashboard/SKILL.md
