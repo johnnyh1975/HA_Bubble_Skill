@@ -38,7 +38,7 @@ ha-bubble-dashboard/
 │   ├── casa5heynev2-template.yaml      ← canonical base theme (copy + diff to generate variants)
 │   ├── colour-intelligence-ref.md      ← palette recipes, WCAG checks, advisory flow
 │   ├── css-theme-ref.md                ← full HA/Bubble var() chain catalogue
-│   ├── dashboard-system.md             ← 5-view architecture, workflow, device profiles, view YAML
+│   ├── dashboard-system.md             ← 5-view architecture, workflow, native-first check, device profiles, masonry migration, wall-panel hardening, view scaffolds
 │   ├── health-check-ref.md             ← YAML audit: parse steps, finding categories, output format
 │   ├── module-authoring-ref.md         ← Bubble Card module editor: field catalog, object selector, sharing format
 │   ├── mushroom-theme-ref.md           ← Mushroom ↔ HA integration, chip cards, template chip
@@ -139,7 +139,7 @@ The skill includes a full colour intelligence layer:
 
 ## The 5-view dashboard system
 
-v1.2 introduces a complete dashboard information architecture built on principled
+The skill includes a complete dashboard information architecture built on principled
 UX foundations. Every new full dashboard Claude generates follows this structure:
 
 | View | Purpose | Engagement type |
@@ -170,8 +170,8 @@ See `references/dashboard-system.md` for the complete architecture and
 
 ## Version
 
-Current: **v1.3**  
-Component pins: Bubble Card 3.2.1 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0
+Current: **v1.4** (2026-07-03)  
+Component pins: Bubble Card 3.2.4 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0 · guidance verified against HA 2026.7
 
 See `CHANGELOG.md` for full version history and update triggers.
 
