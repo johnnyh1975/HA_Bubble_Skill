@@ -2,7 +2,7 @@
 # ha-bubble-dashboard skill — Phase 3
 # Covers: all card types, CSS variables, JS template API,
 #         module workflow, version compatibility.
-# Source: Bubble Card v3.2.4 README + release notes v3.0–v3.2.4
+# Source: Bubble Card v3.2.5 source tree (src/) + release notes v3.0–v3.2.5
 
 ---
 
@@ -18,6 +18,7 @@
 | v3.2.2 | Bug fixes: empty column height, migration scoping, climate `swing_horizontal_mode`. Stable. | None. |
 | v3.2.3 | Smart entity/card suggestions in the editor (HA 2026.6 integration, editor UX only). `close_action` now fires only on manual pop-up close, not during navigation between pop-ups — fixes nested pop-up navigation. Fixed pop-up header background-color leaking onto child cards. Fixed pop-ups staying visible on iOS due to an HA 2026.5.x sections-layout DOM change. | No YAML changes. If troubleshooting nested-pop-up navigation, confirm the user is on v3.2.3+. |
 | v3.2.4 | **Standalone pop-ups nested inside `vertical-stack` / `vertical-stack-in-card` now work correctly** (create, edit, remove, duplicate, move) — this pattern was broken/unreliable in v3.2.0–v3.2.3. Editor now shows an explicit "Nested pop-ups are not supported" warning card if a pop-up is placed inside another pop-up's own `cards:` block (this was always unsupported, just silent before). Improved module-editor object selector for module developers (groups, conditionals, variants — editor UI only, not YAML-facing). Various perf/cleanup fixes for pop-up DOM lifecycle. | If a recipe wraps a Bubble pop-up inside `vertical-stack`/`vertical-stack-in-card`, note it requires v3.2.4+. Never generate a pop-up nested inside another pop-up's `cards:` — this remains unsupported at every version. |
+| v3.2.5 | **Cover tilt support** — new `tilt_buttons` (position or `hidden`), `open_tilt_service`, `close_tilt_service` on the cover card, `cover_slider_type: tilt_position` on cover sliders and slider sub-buttons. Editor shows the tilt panel only when the entity reports `OPEN_TILT`/`CLOSE_TILT`/`SET_TILT_POSITION`. Pop-ups inside `grid`/masonry layout boundaries no longer hide the shared `hui-card`; improved pop-up shell detach on leaving editor mode. | Purely additive. Tilt YAML requires v3.2.5+ — on older versions the options are ignored. |
 
 **Always generate v3.2+ formats.** Never generate the pre-v3.2 pop-up pattern (separate stack + pop-up card at the top of a view). Never reference `bubble-pop-up-fix.js`. Never nest a `card_type: pop-up` inside another pop-up's `cards:` block — always unsupported, and v3.2.4+ surfaces an explicit editor warning for it.
 
@@ -316,6 +317,8 @@ card_layout: large
 | `use_accent_color` | boolean | false | Use theme accent instead of light colour (lights only) |
 | `scrolling_effect` | boolean | true | Scroll text when it overflows |
 | `button_action` | object | — | `tap_action`, `double_tap_action`, `hold_action` on the card body |
+| `show_last_updated` | boolean | false | Show last updated time (counterpart to `show_last_changed`) |
+| `sub_button_justify_content` | string | — | Alignment of the sub-button row: any CSS `justify-content` value (`flex-start`, `center`, `space-between`…) |
 
 **Slider-specific options:**
 
@@ -328,6 +331,12 @@ card_layout: large
 | `slider_live_update` | false | Update entity while sliding (not recommended for all) |
 | `slider_fill_orientation` | `left` | `left` / `right` / `top` / `bottom` |
 | `allow_light_slider_to_0` | false | Let slider reach 0% (turns off light) |
+| `slider_value_position` | `right` | `right` / `left` / `center` / `hidden` — where the value label sits |
+| `relative_slide` | false | Slide relative to the current value instead of jumping to the touch point. Mutually exclusive with `tap_to_slide`. |
+| `invert_slider_value` | false | Invert the displayed value (e.g. show "closed %" instead of "open %") |
+| `cover_slider_type` | `position` | `position` / `tilt_position` — which cover attribute the slider drives (v3.2.5+) |
+| `hue_force_saturation` | false | With `light_slider_type: hue`, keep saturation fixed while sliding hue |
+| `hue_force_saturation_value` | — | The saturation value (0–100) held when `hue_force_saturation: true` |
 | `light_transition` | false | Enable smooth brightness transitions |
 | `light_transition_time` | 500 | Transition time in ms |
 | `tap_to_slide` | false | Tap to activate slider instead of hold |
@@ -563,6 +572,7 @@ sub_button:
 ```
 
 **Climate-specific options:** `hide_target_temp_low`, `hide_target_temp_high`,
+`hide_temperature` (hide the current-temperature readout entirely),
 `min_temp`, `max_temp`.
 
 ---
@@ -582,6 +592,32 @@ icon_close: mdi:blinds
 
 **Cover-specific options:** `icon_up`, `icon_down`, `open_service`,
 `stop_service`, `close_service`, `main_buttons_position`.
+
+**Tilt support (v3.2.5+)** — for venetian blinds and any cover reporting
+`OPEN_TILT` / `CLOSE_TILT` / `SET_TILT_POSITION`:
+
+```yaml
+type: custom:bubble-card
+card_type: cover
+entity: cover.living_room_venetian
+name: Venetian blinds
+tilt_buttons: top          # top (default) / bottom / left / right / hidden
+open_tilt_service: cover.open_cover_tilt     # optional override
+close_tilt_service: cover.close_cover_tilt   # optional override
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `tilt_buttons` | `top` | Position of the tilt button pair — `top` / `bottom` / `left` / `right` / `hidden` |
+| `open_tilt_service` | `cover.open_cover_tilt` | Service called by the open-tilt button |
+| `close_tilt_service` | `cover.close_cover_tilt` | Service called by the close-tilt button |
+
+Only emit tilt options when the cover actually supports tilt — the editor
+hides the whole panel otherwise, and on a non-tilt cover the buttons do
+nothing. To drive tilt from a slider instead of buttons, set
+`cover_slider_type: tilt_position` (works on the card slider and inside a
+slider sub-button); combine with `tilt_buttons: hidden` for a slider-only
+tilt control.
 
 ---
 
@@ -625,12 +661,33 @@ type: custom:bubble-card
 card_type: calendar
 entities:
   - entity: calendar.family
-    color: '#D9BE8B'
+    color: accent          # colour NAME → var(--accent-color), not a hex
 days: 7
 limit: 5
 show_end: true
 show_progress: true
+show_place: true
+show_started_events: true
 ```
+
+**Iron Law on calendar colours.** The `color:` key accepts either a hex
+string or a **colour name**. A name is resolved to `var(--<name>-color)`,
+so `color: accent` → `var(--accent-color)` and `color: red` →
+`var(--red-color)`. Always use the name form — it is the only way to keep
+calendar entity colours inside the theme. A raw hex here is a genuine
+Iron Law violation, not an exception. (`color: transparent` is a special
+case and hides the colour bar entirely.)
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `days` | — | Number of days to look ahead |
+| `limit` | — | Maximum number of events shown |
+| `show_end` | false | Show event end time |
+| `show_progress` | false | Progress bar on events currently running |
+| `show_place` | false | Show the event location |
+| `show_started_events` | false | Keep events that have already started in the list |
+| `scrolling_effect` | true | Scroll long event titles |
+| `event_action` | — | `tap_action` applied to individual events (defaults to `none`) |
 
 ---
 
@@ -663,7 +720,7 @@ sub_button:
 type: custom:bubble-card
 card_type: sub-buttons
 footer_mode: true
-footer_full_width: true
+footer_full_width: true      # or set footer_width instead
 footer_bottom_offset: 16
 sub_button:
   bottom:
@@ -678,6 +735,24 @@ sub_button:
         action: navigate
         navigation_path: '#lights'
 ```
+
+**Layout options for the sub-buttons card:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `hide_main_background` | false | Transparent card — the chip-bar look |
+| `footer_mode` | false | Pin the card to the bottom of the viewport |
+| `footer_full_width` | false | Footer spans the full width |
+| `footer_width` | — | Fixed footer width in px. Ignored when `footer_full_width: true` |
+| `footer_bottom_offset` | `16` | Distance from the bottom edge in px |
+| `menu_style` | false | Menu-style rendering of the button row |
+| `labels_below` | false | Labels under the icons — only effective with `menu_style: true` |
+| `hide_button_labels` | false | Icons only, no labels |
+| `compact_mode` | false | Tighter button spacing and smaller footprint |
+| `space_between_buttons` | false | Distribute buttons with space between them |
+
+`labels_below` silently does nothing without `menu_style: true` — if a user
+reports labels not moving, check that pairing first.
 
 ---
 
@@ -940,6 +1015,23 @@ specified what card type to use. Always verify with `#version-compat` first.
 | `update` | `button` | `state` — shows update available; `more-info` to install |
 | `button` (HA domain) | `button` | `switch` — tap calls `button.press` |
 | `event` | `button` | `state` display only — read-only domain |
+| `siren` | `button` | `switch` — Bubble Card treats it as a toggle domain |
+| `remote` | `button` | `switch` — toggle domain |
+| `lawn_mower` | `button` | `switch` — a toggle domain in Bubble Card, with a built-in `mdi:robot-mower` icon. Add a sub-button on the `activity` attribute for status. |
+| `valve` | native tile | **No Bubble Card support.** Not a recognised toggle or slider domain. Use the native HA tile card, or a `button` with an explicit `tap_action: call-service` on `valve.open_valve` / `valve.close_valve`. |
+| `water_heater` | native tile | **No Bubble Card support** (unlike `climate`). Use the native tile card with its temperature feature, or `button` + `more-info`. |
+| `todo` | native card | **No Bubble Card support.** Use the native todo-list card; a Bubble `button` can navigate to it. |
+| `image` | native card | Use the native `picture-entity` / `image` card, same reasoning as `camera`. |
+
+**Domain support is not open-ended.** Bubble Card recognises a fixed set of
+toggle and slider domains internally (verified in v3.2.5 source): toggle =
+`light`, `switch`, `fan`, `input_boolean`, `lock`, `siren`, `remote`,
+`humidifier`, `vacuum`, `lawn_mower`, `script`, `scene`, `automation`,
+`cover`, `climate`, `media_player`; slider = `light`, `media_player`,
+`cover`, `input_number`, `number`, `climate`, `fan`. A domain outside these
+lists still renders as a card, but `button_type: switch` or `slider` will not
+behave as expected — fall back to an explicit `tap_action` or the native
+tile, and say so rather than generating a control that silently does nothing.
 
 ### Sub-button patterns for complex domains
 

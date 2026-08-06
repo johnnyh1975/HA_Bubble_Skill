@@ -9,12 +9,13 @@ description: >
 
 metadata:
   version: 1.4
-  bubble_card: "3.2.4"
+  bubble_card: "3.2.5"
   streamline_card: "0.2.2"
   sidebar_card: "0.1.9.9"
   bubble_card_tools: "1.0.2"   # confirmed current — checked 2026-07-03
   ha_minimum: "2024.3.0"
-  ha_checked: "2026.7"        # guidance verified against HA release notes up to 2026.7
+  ha_checked: "2026.7"
+  mushroom: "5.2.2"           # verified against Mushroom source        # guidance verified against HA release notes up to 2026.7
 ---
 
 # HA Dashboard UX
@@ -114,13 +115,14 @@ Generate → checklist (§8) → deliver
 | "The HA default styling module is required" | NO. It is optional. The skill outputs a merged theme file that handles Bubble ↔ HA alignment. |
 | "Sidebar Card has no issues on HA 2026" | CAUTION. bottomCard has an intermittent setConfig bug. showTopMenuOnMobile behaviour changed in HA 2026.1. Test after install. |
 | "Clicking a button inside pop-up A should open pop-up B directly" | CHANGED in v3.2.x. Navigating from one open pop-up to another now closes the first pop-up — a second tap is required to open the next. Workaround: add a dismiss button to each pop-up, or use `close_by_clicking_outside: false` to prevent accidental dismissal while navigating. |
-| "I swapped the accent, Bubble Card updated but Mushroom is still blue" | EXPECTED without ZONE 6 update. Set `accent-color-rgb: "NR,NG,NB"` in the mode-independent block so `mush-rgb-primary` picks up the new accent. |
+| "I swapped the accent, Bubble Card updated but Mushroom is still blue" | EXPECTED without ZONE 6 update. Set `accent-color-rgb: "NR,NG,NB"` in the mode-independent block. Mushroom only follows where a state variable points at `var(--accent-color-rgb)` — there is no `mush-rgb-primary`. |
 | "I'll generate both light and dark mode for this wall panel" | ASK FIRST. Fixed-display setups (wall panels, kiosks) need single-mode themes. Generating both wastes maintenance surface and risks accidental mode switching. |
 | "I'll just update the font variables in the theme" | INCOMPLETE. Font changes also require a JS loader file at /config/www/ and an extra_module_url entry in configuration.yaml. Theme variables alone have no effect without the loader. |
 | "I'll generate automations for this dashboard button" | STOP. Send the user to ha-yaml for the automation. Only generate the navigate tap_action here. |
 | "A button card is fine for this fan/vacuum/lock" | CHECK. Use bubble-card-ref.md#entity-domain-map first — complex domains need sub-button patterns, not a plain switch button. |
 | "I'll add a card for every device I have" | STOP. Ask whether automation already handles it. The dashboard is for what automation cannot do — every unnecessary card competes for attention with the ones that matter. |
 | "I'll build a battery grid / security log / weather forecast section" | CHECK FIRST. Native HA covers these since 2026.5/2026.6 (Maintenance dashboard, Security Activity list, weather + media tile features). Raise as Advisory — see dashboard-system.md#native-first. |
+| "It's a calendar entity colour, hex is fine there" | NO. `color:` accepts a colour **name** which resolves to `var(--<name>-color)`. Use `color: accent`, never a hex. The Iron Law has no calendar exception. |
 | "The user wants Bubble Weather / Badges 2 — I'll recreate it" | STOP. Paid Patreon modules are never reproduced. Explain, route to the Module Store/Patreon, or author an original module instead (module-authoring-ref.md). |
 
 ---
@@ -130,7 +132,11 @@ Generate → checklist (§8) → deliver
 Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 
 **bubble-card-ref.md** — any Bubble Card YAML:
-`#version-compat`★ · `#pop-up` · `#button` · `#sub-buttons` · `#horizontal-buttons-stack` · `#media-player` · `#climate` · `#cover` · `#select` · `#separator` · `#calendar` · `#sub-buttons-only` · `#css-variables` · `#js-templates` · `#modules` · `#module-authoring` · `#actions` · `#entity-domain-map`★
+`#version-compat`★ · `#pop-up` · `#button` · `#sub-buttons` · `#horizontal-buttons-stack` · `#media-player` · `#climate` · `#cover` · `#select` · `#separator` · `#calendar` · `#sub-buttons-only` · `#css-variables` · `#js-templates` · `#modules` · `#module-authoring` · `#actions` · `#entity-domain-map`★ · `#touch-targets`
+
+**eval-set.md** — behavioural regression tests. Not read during normal
+operation; used when validating a skill release.
+`#eval-1-native-first` · `#eval-2-calendar-iron-law` · `#eval-3-cover-tilt` · `#eval-4-paid-module` · `#eval-5-mushroom-switch-colour` · `#eval-6-masonry-migration` · `#eval-7-automate-first` · `#eval-8-language` · `#eval-9-accessibility` · `#eval-10-unsupported-domain`
 
 **module-authoring-ref.md** — writing a Bubble Card module's `editor:` schema,
 or packaging/sharing a module: `#basic-structure` · `#field-properties` ·
@@ -141,13 +147,13 @@ bubble-card-ref.md#module-authoring first for the module's top-level structure
 — this file is only the `editor:` field catalog and the export format.
 
 **css-theme-ref.md** — theme colour YAML:
-`#var-chain`★ · `#ha-vars` · `#bubble-vars` · `#light-mode` · `#dark-mode` · `#how-to-swap-accent` · `#full-palette-swap` · `#theme-file-structure` · `#mushroom-vars` · `#app-header-vars` · `#font-size-vars`
+`#var-chain`★ · `#ha-vars` · `#bubble-vars` · `#light-mode` · `#dark-mode` · `#how-to-swap-accent` · `#full-palette-swap` · `#theme-file-structure` · `#mushroom-vars` · `#app-header-vars` · `#font-size-vars` · `#additional-light-mode-vars`
 
 **typography-ref.md** — font or typography change:
 `#architecture`★ · `#loading-methods` · `#ha-variables` · `#size-system` · `#alexandria` · `#font-only-update` · `#swap-recipes` · `#single-mode-themes` · `#font-troubleshooting`
 
 **streamline-ref.md** — Streamline templates:
-`#maintenance-status` · `#ui-mode-vs-yaml-mode`★ · `#template-anatomy` · `#variable-syntax` · `#javascript-keys` · `#dry-decision` · `#file-organisation` (incl. `!include` tag + background revalidation) · `#known-limitations` · `#bubble-card-interaction`
+`#maintenance-status` · `#ui-mode-vs-yaml-mode`★ · `#template-anatomy` · `#variable-syntax` · `#javascript-keys` · `#dry-decision` · `#file-organisation` (incl. `!include` tag + background revalidation) · `#known-limitations` · `#bubble-card-interaction` · `#delivery-format`
 
 **sidebar-ref.md** — Sidebar Card config:
 `#known-issues`★ · `#installation` · `#main-options` · `#width-breakpoints` · `#sidebar-menu` · `#template-messages` · `#style` · `#bottom-card` · `#combined-example`
@@ -156,14 +162,14 @@ bubble-card-ref.md#module-authoring first for the module's top-level structure
 `#two-modes`★ · `#casa5-profile` · `#wcag-checks` · `#harmony-rules` · `#bring-your-own-accent` · `#advisory-conversation-flow` · `#accent-swap-recipes` · `#full-palette-recipes` · `#full-palette-recipes-dark`
 
 **mushroom-theme-ref.md** — Mushroom Cards theming:
-`#architecture`★ · `#ha-bridge` · `#state-mapping` · `#colour-palette` · `#structure-vars` · `#integration-block` · `#palette-swap-impact` · `#card-override-limits` · `#accent-colour-for-switches` · `#chip-card` · `#template-chip`
+`#mushroom-cards-overview` · `#architecture`★ · `#ha-bridge` · `#state-mapping` · `#colour-palette` · `#structure-vars` · `#integration-block` · `#palette-swap-impact` · `#card-override-limits` · `#accent-colour-for-switches` · `#chip-card` · `#template-chip`
 
-**casa5heynev2-template.yaml** — base for all theme generation. Never reconstruct from scratch.
+**theme/Casa5HeyneV2.yaml** — base for all theme generation. Never reconstruct from scratch.
 
 **test-dashboard.yaml** — complete importable dashboard assembling Recipes 0–5. Recipes 1–6 are in `recipes-extended.md`. Use to verify YAML validity or as a starter dashboard.
 
 **troubleshooting-ref.md** — when something is broken:
-`#cache-issues`★ · `#theme-not-applying` · `#popup-not-opening` · `#streamline-not-found` · `#sidebar-not-showing` · `#bubble-styling-ignored` · `#version-migration` · `#hbs-not-ordering` · `#sections-layout-issues` · `#sub-buttons-not-showing` · `#card-state-stale` · `#font-not-loading` · `#popup-z-index` · `#cardmod-overflow-clipping` · `#nested-popup-warning` · `#general-diagnostic-checklist`★
+`#first-steps`★ · `#cache-issues` · `#theme-not-applying` · `#popup-not-opening` · `#streamline-not-found` · `#sidebar-not-showing` · `#bubble-styling-ignored` · `#version-migration` · `#hbs-not-ordering` · `#sections-layout-issues` · `#sub-buttons-not-showing` · `#card-state-stale` · `#font-not-loading` · `#popup-z-index` · `#cardmod-overflow-clipping` · `#nested-popup-warning` · `#general-diagnostic-checklist`★
 
 **dashboard-system.md** — architecture, workflow, native-first check, device profiles, migration, view scaffolds:
 `#system-overview`★ · `#native-first` · `#navigation-layer` · `#classification-output` · `#full-dashboard-workflow` · `#entity-inventory` · `#device-type-profiles` · `#wall-panel-hardening` · `#sections-anatomy` · `#multi-view-design` · `#panel-view` · `#masonry-migration` · `#native-interop` · `#view-overview` · `#view-rooms` · `#view-scenes` · `#view-activity` · `#view-settings` · `#extension-energy` · `#extension-music`
@@ -456,6 +462,34 @@ Key rules:
 
 ---
 
+### Language of generated dashboards
+
+Bubble Card localises its **editor** into every language HA supports, and
+bundles a handful of runtime strings (the calendar card's "Busy" / "All day" /
+"No events"). Everything else a user reads on the dashboard — `name:` values,
+separator titles, pop-up headers, HBS labels — comes from the YAML this skill
+generates. It is not translated by anything.
+
+**Rule: generate labels in the language the user is writing in.** If the
+conversation is in German, the dashboard says `name: Wohnzimmer`, not
+`name: Living Room`. Do not silently produce an English dashboard for a
+non-English user.
+
+Two things stay in English regardless of the user's language:
+- **Navigation hashes** (`#living-room`, `#settings`) — they are identifiers,
+  they appear in the URL, and umlauts or spaces in a hash cause routing
+  problems. Keep them ASCII, lowercase, hyphenated.
+- **Entity IDs and YAML keys** — obviously, but worth stating because the
+  `name:` next to an entity ID will differ, and that is correct.
+
+**The `name:` ↔ friendly-name rule still wins.** Where a voice assistant is in
+use, `name:` must match the entity's friendly name in HA — so if the user's
+entities are named in German, the dashboard labels follow them rather than a
+translation. If entity names and the conversation language disagree, ask which
+should win instead of guessing.
+
+---
+
 ### Accessibility
 
 **Motion sensitivity (wall panels):**
@@ -470,6 +504,34 @@ Key rules:
 
 **Voice assistant alignment:**
 - `name:` must match entity friendly name — dashboard aliases break voice commands
+
+**Screen readers and keyboard navigation — know the limits.**
+Bubble Card builds its controls from styled `div` elements rather than native
+form controls. This has consequences worth stating plainly rather than
+papering over:
+- Sliders are not `<input type="range">`, so they expose no value or role to
+  assistive technology and cannot be operated with arrow keys.
+- Tap targets are `div`s with click handlers — they are generally not in the
+  tab order, so a Bubble-only dashboard is difficult to operate without a
+  pointing device.
+- Pop-ups are hash-routed overlays, not native dialogs. Focus is not trapped
+  inside them and the browser Back button, not Escape, is the reliable exit.
+
+**What to do about it.** No card option fixes this — it is architectural.
+So when a user states an accessibility requirement (screen reader use,
+keyboard-only operation, motor impairment), say so honestly and offer the
+mitigation rather than generating a dashboard that will not work for them:
+- Native HA tile, heading and area cards *do* use accessible controls
+  (`#native-interop`) — use them for anything that must be operable by
+  keyboard or screen reader, and keep Bubble Card for the visual layer.
+- Voice (Assist) is often the strongest path: it bypasses the UI entirely,
+  which is why the `name:` alignment rule above matters more, not less.
+- Automate the interaction away where possible — the automate-first principle
+  is itself an accessibility strategy.
+
+Never claim a generated Bubble dashboard is WCAG-conformant. The colour work
+in this skill covers contrast (WCAG 1.4.3/1.4.11) — it says nothing about
+operability (2.1 keyboard) or robustness (4.1.2 name/role/value).
 
 ---
 
@@ -497,7 +559,7 @@ Single view with pop-ups is valid for simple homes. Add views only when:
 > **Read before starting:** `css-theme-ref.md#var-chain` → `#ha-vars` → `#how-to-swap-accent` or `#full-palette-swap`
 > **For palette decisions:** `colour-intelligence-ref.md#two-modes` → `#wcag-checks` → `#harmony-rules` → `#accent-swap-recipes` or `#full-palette-recipes`
 > **For Mushroom integration:** `mushroom-theme-ref.md#integration-block` → `#palette-swap-impact`
-> **For generation:** use `references/casa5heynev2-template.yaml` as the base — never reconstruct from scratch.
+> **For generation:** use `theme/Casa5HeyneV2.yaml` as the base — never reconstruct from scratch.
 
 The theme is the single source of truth for all colours. Card YAML never
 contains colour values — it inherits everything through the var() chain.
@@ -885,7 +947,7 @@ views:
 **Colour & theme**
 - [ ] Single-mode vs both-modes: wall panel / kiosk → single mode; general → both
 - [ ] No hex values in card YAML — only `var(--ha-variable)` references
-- [ ] Theme output is a complete `.yaml` file based on `casa5heynev2-template.yaml`
+- [ ] Theme output is a complete `.yaml` file based on `theme/Casa5HeyneV2.yaml`
 - [ ] Accent lever chain complete — all 8 opacity variables updated
 - [ ] Mushroom sync: `accent-color-rgb` updated in mode-independent block (ZONE 6)
 - [ ] `warning-color: "#FA7575"` preserved unchanged

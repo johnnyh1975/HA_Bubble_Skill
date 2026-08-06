@@ -3,6 +3,8 @@
 # Covers: the three-layer variable architecture, HA bridge wiring,
 #         complete state colour mapping, integration block for theme files,
 #         palette swap impact, and what card-level overrides can/cannot do.
+# Source: Mushroom v5.2.2 — src/utils/theme.ts (variable chain verified
+#         against source, not documentation).
 
 ---
 
@@ -32,13 +34,20 @@ Layer 2b — Entity-domain state mapping (var() chain within Mushroom)
         ↓ consumed by
 
 Layer 2c — HA RGB bridge (parallel to accent-color chain)
-  accent-color-rgb: "217, 190, 139"     ← accent as RGB triplet
-  mush-rgb-primary: var(--accent-color-rgb)  ← connects Mushroom to HA accent
+  accent-color-rgb: "217, 190, 139"          ← accent as RGB triplet
+  mush-rgb-state-entity: var(--accent-color-rgb)  ← wires Mushroom to HA accent
 ```
 
+> **Verified against Mushroom 5.2.2 source.** There is no `mush-rgb-primary`
+> variable — Mushroom has no single "primary" hook. To tie Mushroom to the HA
+> accent you set the *state* variables you want to move (usually
+> `mush-rgb-state-entity`) to `var(--accent-color-rgb)`. Likewise there is no
+> `mush-rgb-state-switch`: switch entities are coloured by
+> `mush-rgb-state-entity`, the generic entity colour.
+
 **What this enables:**
-- Changing `accent-color` → also moves `mush-rgb-primary` → can drive
-  `mush-rgb-state-switch` and `mush-rgb-state-entity` to match Bubble Card
+- Changing `accent-color` → also moves `accent-color-rgb` → drives
+  `mush-rgb-state-entity` (and therefore switches) to match Bubble Card
 - Changing `mush-rgb-orange` → immediately shifts all light, cover, lock,
   and climate-dry icons without touching entity card YAML
 - Palette swaps stay in the theme file — no card-level changes needed
@@ -67,8 +76,9 @@ and inside each mode block for the disabled colour which differs.
 # Format: "R, G, B" (bare integers, no rgb() wrapper)
 accent-color-rgb:   "217, 190, 139"   # ← RGB of #D9BE8B (gold — update with accent)
 
-# mush-rgb-primary wires Mushroom to the HA accent
-mush-rgb-primary:   "var(--accent-color-rgb)"
+# There is no "mush-rgb-primary" in Mushroom — wire the accent into the
+# state variables you want to follow it (usually state-entity):
+mush-rgb-state-entity: "var(--accent-color-rgb)"
 
 # HA also ships these natively (since 2022.11) — reference in Mushroom vars:
 # --rgb-primary-color     → same as accent-color in RGB
@@ -98,11 +108,20 @@ which are defined per-mode.
 
 ```yaml
 # ── Mushroom state colour mapping (mode-independent) ─────────
-mush-rgb-state-fan:    "var(--mush-rgb-green)"   # fan ON → green
-mush-rgb-state-light:  "var(--mush-rgb-orange)"  # light ON → orange
-mush-rgb-state-entity: "var(--mush-rgb-blue)"    # generic entity → blue
-mush-rgb-state-switch: "var(--mush-rgb-blue)"    # switch ON → blue
+mush-rgb-state-fan:          "var(--mush-rgb-green)"   # fan ON → green
+mush-rgb-state-light:        "var(--mush-rgb-orange)"  # light ON → orange
+mush-rgb-state-entity:       "var(--mush-rgb-blue)"    # generic entity → blue
+                                                       # ← also colours switches
+mush-rgb-state-vacuum:       "var(--mush-rgb-teal)"    # vacuum → teal
+mush-rgb-state-media-player: "var(--mush-rgb-indigo)"  # media player → indigo
+mush-rgb-state-lock:         "var(--mush-rgb-blue)"    # lock (base) → blue
+mush-rgb-state-number:       "var(--mush-rgb-blue)"    # number → blue
+mush-rgb-state-humidifier:   "var(--mush-rgb-purple)"  # humidifier → purple
 ```
+
+> **No `mush-rgb-state-switch` exists** (verified against Mushroom 5.2.2).
+> Switches inherit `mush-rgb-state-entity`. Setting a `state-switch` variable
+> has no effect at all — do not generate it.
 
 **Person presence states (3 sub-states):**
 
@@ -127,6 +146,27 @@ mush-rgb-state-alarm-disarmed: "var(--mush-rgb-info)"    # disarmed → blue
 mush-rgb-state-alarm-armed:    "var(--mush-rgb-success)" # armed → green
 mush-rgb-state-alarm-triggered:"var(--mush-rgb-danger)"  # triggered → red
 ```
+
+**Lock states (3 sub-states):**
+
+```yaml
+mush-rgb-state-lock-locked:   "var(--mush-rgb-green)"   # locked → green
+mush-rgb-state-lock-unlocked: "var(--mush-rgb-red)"     # unlocked → red
+mush-rgb-state-lock-pending:  "var(--mush-rgb-orange)"  # pending → orange
+```
+
+**Update states (3 sub-states — note the inconsistent naming):**
+
+```yaml
+mush-rgb-state-update-on:   "var(--mush-rgb-orange)"  # update available → orange
+mush-rgb-update-off:        "var(--mush-rgb-green)"   # up to date → green
+mush-rgb-update-installing: "var(--mush-rgb-blue)"    # installing → blue
+```
+
+> Only the "on" variant carries the `state-` prefix. `mush-rgb-update-off`
+> and `mush-rgb-update-installing` have **no** `state-` segment — an upstream
+> naming inconsistency in Mushroom, confirmed in 5.2.2. Writing
+> `mush-rgb-state-update-off` has no effect.
 
 **Climate HVAC mode states (8 sub-states):**
 
@@ -205,7 +245,7 @@ mush-rgb-white:       "255, 255, 255"
 
 > **Important:** The Casa5 `mush-rgb-blue` override (`37, 43, 56`) means any
 > Mushroom state that points to `var(--mush-rgb-blue)` will show the dark text
-> colour, not a true blue. `mush-rgb-state-entity`, `mush-rgb-state-switch`,
+> colour, not a true blue. `mush-rgb-state-entity` (which also covers switches),
 > `mush-rgb-state-cover-open`, and `mush-rgb-state-alarm-disarmed` are all
 > affected. This is a deliberate design choice — to get true blue states,
 > restore `mush-rgb-blue: "33, 150, 243"`.
@@ -300,7 +340,7 @@ mush-icon-symbol-size:    "0.6em"
 
 This is the full block to add to the **mode-independent** section of the theme
 (before `modes:`). It wires all three layers and is missing from Casa5HeyneV2
-today. The `casa5heynev2-template.yaml` has been updated to include this.
+today. The `theme/Casa5HeyneV2.yaml` has been updated to include this.
 
 ```yaml
 # ════════════════════════════════════════════════════════════════
@@ -314,18 +354,23 @@ today. The `casa5heynev2-template.yaml` has been updated to include this.
 # Format: "R, G, B" — bare integers, no rgb() wrapper.
 accent-color-rgb: "217, 190, 139"        # RGB of #D9BE8B — matches light mode
 
-# mush-rgb-primary wires Mushroom to the HA accent lever
-mush-rgb-primary: "var(--accent-color-rgb)"
+# No "mush-rgb-primary" exists — wire the accent into the state variables
+# that should follow it:
+mush-rgb-state-entity: "var(--accent-color-rgb)"   # generic entities + switches
 
 # ── Layer 2b: Entity-domain state mapping ────────────────────
 # Points each domain state to a Layer 2a colour variable.
 # Change the target (e.g. var(--mush-rgb-amber)) to remap a domain.
 
 # Simple domains
-mush-rgb-state-fan:    "var(--mush-rgb-green)"    # fan ON
-mush-rgb-state-light:  "var(--mush-rgb-orange)"   # light ON
-mush-rgb-state-entity: "var(--mush-rgb-blue)"     # generic entity
-mush-rgb-state-switch: "var(--mush-rgb-blue)"     # switch ON
+mush-rgb-state-fan:          "var(--mush-rgb-green)"    # fan ON
+mush-rgb-state-light:        "var(--mush-rgb-orange)"   # light ON
+mush-rgb-state-vacuum:       "var(--mush-rgb-teal)"     # vacuum
+mush-rgb-state-media-player: "var(--mush-rgb-indigo)"   # media player
+mush-rgb-state-humidifier:   "var(--mush-rgb-purple)"   # humidifier
+mush-rgb-state-lock:         "var(--mush-rgb-blue)"     # lock (base)
+mush-rgb-state-number:       "var(--mush-rgb-blue)"     # number
+# Switches: no dedicated variable — they follow mush-rgb-state-entity above.
 
 # Person presence
 mush-rgb-state-person-home:     "var(--mush-rgb-success)"
@@ -388,20 +433,19 @@ must be updated for Mushroom to stay in sync:
 ```yaml
 # In the mode-independent block (not inside modes:)
 accent-color-rgb: "NR, NG, NB"   # ← RGB of new accent hex
-# mush-rgb-primary automatically follows via var(--accent-color-rgb)
+# Any state variable pointing at var(--accent-color-rgb) follows automatically
 ```
 
 **No other Mushroom changes needed for an accent swap** — the state mappings
-point to named colour variables, not the accent. Only `mush-rgb-state-switch`
-and `mush-rgb-state-entity` would need updating if you want those to follow
-the accent (they currently point to `mush-rgb-blue`).
+point to named colour variables, not the accent. Only `mush-rgb-state-entity`
+needs updating if you want generic entities and switches to follow the accent
+(it otherwise points to `mush-rgb-blue`).
 
 **To make switches and generic entities follow the accent:**
 
 ```yaml
 # In mode-independent block — override state mappings to use accent
-mush-rgb-state-switch: "var(--mush-rgb-primary)"
-mush-rgb-state-entity: "var(--mush-rgb-primary)"
+mush-rgb-state-entity: "var(--accent-color-rgb)"   # covers switches too
 ```
 
 **Full palette swap — update Layer 2a base colours if backgrounds shift significantly:**
@@ -436,7 +480,7 @@ icon_color: teal         # named colour or CSS colour
 card_mod:
   style: |
     :host {
-      --mush-rgb-state-switch: var(--mush-rgb-teal);
+      --mush-rgb-state-entity: var(--mush-rgb-teal);
     }
 ```
 
@@ -466,8 +510,7 @@ The most common customisation request: make switches follow the accent colour
 **Option A — Theme-level (applies to all switches everywhere):**
 ```yaml
 # In mode-independent block
-mush-rgb-state-switch: "var(--mush-rgb-primary)"
-mush-rgb-state-entity: "var(--mush-rgb-primary)"
+mush-rgb-state-entity: "var(--accent-color-rgb)"   # switches follow this
 ```
 
 **Option B — Per-card (only this switch):**
@@ -485,7 +528,7 @@ entity: switch.my_switch
 card_mod:
   style: |
     :host {
-      --mush-rgb-state-switch: var(--mush-rgb-primary);
+      --mush-rgb-state-entity: var(--accent-color-rgb);
     }
 ```
 
@@ -618,7 +661,8 @@ shows its state. Both pick up the theme accent colour automatically.
 ```
 
 **How the theme integration connects them:**
-- Bubble Card active state → `var(--accent-color)` → `mush-rgb-primary` → gold
+- Bubble Card active state → `var(--accent-color)`; Mushroom follows only where
+  a state variable is pointed at `var(--accent-color-rgb)`
 - Mushroom light chip active → `mush-rgb-state-light` → `mush-rgb-orange` → orange
 - Mushroom person home chip → `mush-rgb-state-person-home` → `mush-rgb-success` → green
 
@@ -629,7 +673,7 @@ Bubble Card is the control surface, Mushroom is the status surface.
 **To make the Mushroom light chip match the Bubble Card accent:**
 ```yaml
 # In mode-independent theme block
-mush-rgb-state-light: "var(--mush-rgb-primary)"  # light chip → accent colour
+mush-rgb-state-light: "var(--accent-color-rgb)"  # light chip → accent colour
 ```
 
 ---
@@ -771,7 +815,7 @@ or `var(--accent-color)` to follow the HA theme accent.
 
 **State-based colour:** leave `icon_color` blank — Mushroom will use the
 `mush-rgb-state-*` mapping from the theme (e.g. light → orange by default,
-configurable via ZONE 6 in `casa5heynev2-template.yaml`).
+configurable via ZONE 6 in `theme/Casa5HeyneV2.yaml`).
 
 ### Mushroom light card — RGB colour picker
 

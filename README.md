@@ -32,12 +32,13 @@ ha-bubble-dashboard/
 ├── SKILL.md                            ← main skill file (iron laws, process, §§1–9)
 ├── CHANGELOG.md                        ← version history and update triggers
 ├── available-skills-entry.md           ← system prompt entry for disk-based usage
+├── verify.py                           ← structural self-check — run before every release
 │
 ├── references/
 │   ├── bubble-card-ref.md              ← all card types, CSS vars, JS API, version compat, performance
-│   ├── casa5heynev2-template.yaml      ← canonical base theme (copy + diff to generate variants)
 │   ├── colour-intelligence-ref.md      ← palette recipes, WCAG checks, advisory flow
 │   ├── css-theme-ref.md                ← full HA/Bubble var() chain catalogue
+│   ├── eval-set.md                     ← behavioural regression tests (10 prompts + criteria)
 │   ├── dashboard-system.md             ← 5-view architecture, workflow, native-first check, device profiles, masonry migration, wall-panel hardening, view scaffolds
 │   ├── health-check-ref.md             ← YAML audit: parse steps, finding categories, output format
 │   ├── module-authoring-ref.md         ← Bubble Card module editor: field catalog, object selector, sharing format
@@ -51,8 +52,27 @@ ha-bubble-dashboard/
 │   └── typography-ref.md               ← font loading, recipes, wall-panel sizes, font-only update
 │
 └── theme/
-    └── Casa5HeyneV2.yaml               ← the base theme — copy to /config/themes/
+    └── Casa5HeyneV2.yaml               ← the base theme — the single source for all
+                                          theme generation, and the file users copy
+                                          to /config/themes/
 ```
+
+---
+
+## Verifying the library
+
+```bash
+python3 verify.py        # exit 0 = clean
+```
+
+Checks anchor integrity, SKILL.md's anchor lists, YAML validity, theme
+light/dark symmetry, banned (nonexistent) component variables, the Iron Law in
+card examples, version-string consistency, and orphaned reference files. Every
+one of these checks exists because that class of bug shipped at least once.
+
+Behavioural testing is separate: `references/eval-set.md` holds ten prompts
+with pass/fail criteria, run in fresh conversations. `verify.py` proves the
+library is structurally sound; the eval set proves it changes behaviour.
 
 ---
 
@@ -73,7 +93,7 @@ The `available-skills-entry.md` contains the trigger conditions and symptom patt
 For claude.ai Projects or any setup where you upload files as project knowledge:
 
 1. Upload all `.md` files (SKILL.md + all references/) as project knowledge documents
-2. Upload `references/casa5heynev2-template.yaml` as a project knowledge file
+2. Upload `theme/Casa5HeyneV2.yaml` as a project knowledge file
 3. **The `available-skills-entry.md` is not needed** — files uploaded to a Project are always in context
 
 **Differences when uploaded directly:**
@@ -94,7 +114,7 @@ All via [HACS](https://hacs.xyz):
 | [Bubble Card Tools](https://github.com/Clooos/Bubble-Card) | Integration | Enables module system |
 | [Streamline Card](https://github.com/brunosabot/streamline-card) | Frontend | Min v0.2.2 |
 | [Sidebar Card](https://github.com/DBuit/sidebar-card) | Frontend | Custom repo — add manually |
-| [Mushroom](https://github.com/piitaya/lovelace-mushroom) | Frontend | Optional — enables chip cards |
+| [Mushroom](https://github.com/piitaya/lovelace-mushroom) | Frontend | Optional — enables chip cards. Verified against v5.2.2 |
 
 Sidebar Card custom repository URL: `https://github.com/DBuit/sidebar-card`
 
@@ -170,8 +190,8 @@ See `references/dashboard-system.md` for the complete architecture and
 
 ## Version
 
-Current: **v1.4** (2026-07-03)  
-Component pins: Bubble Card 3.2.4 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0 · guidance verified against HA 2026.7
+Current: **v1.4** (2026-08-06)  
+Component pins: Bubble Card 3.2.5 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0 · guidance verified against HA 2026.7
 
 See `CHANGELOG.md` for full version history and update triggers.
 

@@ -147,6 +147,7 @@ resources.
 | Pre-v3.2 → v3.2+ | Pop-up format completely changed | Pop-ups must be standalone top-level cards with `cards:` block. The UI shows a migration prompt — use it, then review generated YAML. |
 | Pre-v3.2 → v3.2+ | `bubble-pop-up-fix.js` removed | Remove any reference to this script from resources. |
 | Pre-v3.2 → v3.2+ | Pop-up modes added | Existing pop-ups get `popup_mode: default` automatically. Optionally migrate to `fit-content` or `centered` where appropriate. |
+| Pre-v3.2.5 → v3.2.5+ | Cover tilt options (`tilt_buttons`, `open_tilt_service`, `close_tilt_service`, `cover_slider_type: tilt_position`) did not exist | Silently ignored on older versions — the card renders without tilt controls. Update to v3.2.5+. No YAML change needed beyond adding the options. |
 | Pre-v3.2.4 → v3.2.4+ | Pop-ups nested in `vertical-stack`/`vertical-stack-in-card` were unreliable (create/edit/remove/duplicate/move could break) | Update to v3.2.4+ if this pattern is in use. No YAML change required — it's a rendering/editor fix. |
 
 **Migration checklist for v3.2+ upgrade:**
@@ -165,6 +166,12 @@ resources.
 | Cause | Fix |
 |-------|-----|
 | A `card_type: pop-up` was added directly inside another pop-up's `cards:` block | Always unsupported, at every version. Move the inner pop-up out to be its own top-level card, and `navigate` to it (e.g. `tap_action: navigate, navigation_path: "#inner-hash"`) instead of nesting it. |
+| Tilt buttons configured but not showing on a cover card | The entity does not report tilt support. Bubble Card only renders tilt controls when `supported_features` includes `OPEN_TILT`, `CLOSE_TILT` or `SET_TILT_POSITION` — the editor hides the whole panel too. Check the entity's `supported_features` in Developer Tools; if the integration doesn't expose tilt, no card option can add it. |
+| Tilt slider moves the cover position instead of the tilt angle | `cover_slider_type` is missing or set to `position`. Set `cover_slider_type: tilt_position` on the card or slider sub-button (v3.2.5+). |
+| Mushroom switch entities ignore a `mush-rgb-state-switch` override | That variable does not exist in Mushroom. Switches are coloured by `mush-rgb-state-entity` — set that instead. |
+| Mushroom cards ignore a `mush-rgb-primary` override | Also nonexistent. Wire the accent through the specific state variables (usually `mush-rgb-state-entity`) via `accent-color-rgb`. |
+| Mushroom update entities ignore `mush-rgb-state-update-off` | Upstream naming inconsistency: the correct names are `mush-rgb-update-off` and `mush-rgb-update-installing` (no `state-` segment). Only `mush-rgb-state-update-on` carries it. |
+| Mushroom colours correct in dark mode but default in light mode (or vice versa) | The `mush-rgb-*` palette is defined in only one `modes:` block. These must be set in **both** light and dark, or the unset mode falls back to Mushroom's own defaults. |
 | Pop-up nested inside `vertical-stack` / `vertical-stack-in-card` and behaving unreliably (not the warning card — a different symptom) | This is a v3.2.0–v3.2.3 bug, fixed in v3.2.4. Update Bubble Card. Not the same issue as true pop-up-in-pop-up nesting above, which is never supported. |
 
 Never generate YAML with a `pop-up` card inside another `pop-up`'s `cards:` array — use hash navigation between separate pop-ups instead.

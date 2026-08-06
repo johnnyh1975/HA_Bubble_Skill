@@ -47,6 +47,14 @@ SYMPTOMS (Claude is going wrong without this skill):
   forecast, media transport) without raising the native option as an advisory
 - Reproducing paid Patreon Bubble Card module code instead of routing to the
   Module Store or authoring an original module
+- Writing a hex value into a Bubble calendar entity `color:` instead of a
+  theme colour name
+- Generating `mush-rgb-state-switch` or `mush-rgb-primary` — neither variable
+  exists in Mushroom
+- Generating English dashboard labels for a non-English conversation
+- Promising a screen-reader-accessible dashboard built from Bubble Cards
+- Generating `button_type: switch` for a domain Bubble Card does not toggle
+  (valve, water_heater, todo)
 </description>
 <location>
 /mnt/skills/user/ha-bubble-dashboard/SKILL.md

@@ -1,5 +1,5 @@
 # ============================================================
-# TEST DASHBOARD — ha-bubble-dashboard skill v1.5
+# TEST DASHBOARD — ha-bubble-dashboard skill v1.4
 # ============================================================
 # A complete, importable Lovelace dashboard assembling all
 # core recipes (0–5) into a working single view.
@@ -100,33 +100,6 @@ cards:
         state_color: true
         step: 0.5
 
-  # HBS footer — Recipe 2: always the last entry in cards:
-  - type: custom:bubble-card
-    card_type: horizontal-buttons-stack
-    auto_order: true
-    highlight_current_view: true
-    is_sidebar_hidden: true
-    1_name: Living Room                      # REPLACE
-    1_icon: mdi:sofa
-    1_link: '#living-room'                   # REPLACE: match pop-up hash above
-    1_entity: light.living_room_group        # REPLACE
-    1_pir_sensor: binary_sensor.living_room_motion # REPLACE
-    2_name: Kitchen                          # REPLACE
-    2_icon: mdi:chef-hat
-    2_link: '#kitchen'
-    2_entity: light.kitchen_group            # REPLACE
-    2_pir_sensor: binary_sensor.kitchen_motion     # REPLACE
-    3_name: Bedroom                          # REPLACE
-    3_icon: mdi:bed
-    3_link: '#bedroom'
-    3_entity: light.bedroom_group            # REPLACE
-    3_pir_sensor: binary_sensor.bedroom_motion     # REPLACE
-
-# ── Sections — the visible card grid ─────────────────────────
-# sections: is a sibling of cards:, not nested inside it.
-sections:
-
-  # Row 1: Full-width sensor chip bar (Recipe 5)
   - type: grid
     column_span: 3
     cards:
@@ -216,3 +189,90 @@ sections:
         card_layout: large
         cover_background: true
         show_state: true
+
+  # ────────────────────────────────────────────────────────────
+  # Row 4 — coverage rows.
+  # These exist so the file works as a smoke test: every documented
+  # card type renders at least once. Delete them if you only want
+  # the core recipes.
+  # ────────────────────────────────────────────────────────────
+  - type: grid
+    column_span: 3
+    cards:
+      - type: custom:bubble-card
+        card_type: separator
+        name: Coverage check
+
+  - type: grid
+    column_span: 2
+    cards:
+      - type: custom:bubble-card   # cover with tilt (needs Bubble Card 3.2.5+)
+        card_type: cover
+        entity: cover.venetian_blinds      # REPLACE — must support tilt
+        name: Venetian blinds
+        card_layout: large
+        icon_open: mdi:blinds-horizontal
+        icon_close: mdi:blinds-horizontal-closed
+        tilt_buttons: top
+        # Slider drives the tilt angle rather than the position:
+        cover_slider_type: tilt_position
+        # If the entity reports no tilt support, the tilt controls simply
+        # do not render — that is expected, not a YAML error.
+
+  - type: grid
+    column_span: 1
+    cards:
+      - type: custom:bubble-card   # select card
+        card_type: select
+        entity: input_select.scene_selector # REPLACE
+        name: Scene
+        icon: mdi:palette
+        show_state: true
+
+  - type: grid
+    column_span: 2
+    cards:
+      - type: custom:bubble-card   # calendar card
+        card_type: calendar
+        entities:
+          - entity: calendar.family        # REPLACE
+            color: accent                  # colour NAME, never a hex
+        days: 7
+        limit: 5
+        show_end: true
+        show_progress: true
+        show_place: true
+
+  - type: grid
+    column_span: 1
+    cards:
+      - type: custom:bubble-card   # empty-column placeholder
+        card_type: empty-column
+
+  # HBS footer — Recipe 2: always the last entry in cards:
+  - type: custom:bubble-card
+    card_type: horizontal-buttons-stack
+    auto_order: true
+    highlight_current_view: true
+    is_sidebar_hidden: true
+    1_name: Living Room                      # REPLACE
+    1_icon: mdi:sofa
+    1_link: '#living-room'                   # REPLACE: match pop-up hash above
+    1_entity: light.living_room_group        # REPLACE
+    1_pir_sensor: binary_sensor.living_room_motion # REPLACE
+    2_name: Kitchen                          # REPLACE
+    2_icon: mdi:chef-hat
+    2_link: '#kitchen'
+    2_entity: light.kitchen_group            # REPLACE
+    2_pir_sensor: binary_sensor.kitchen_motion     # REPLACE
+    3_name: Bedroom                          # REPLACE
+    3_icon: mdi:bed
+    3_link: '#bedroom'
+    3_entity: light.bedroom_group            # REPLACE
+    3_pir_sensor: binary_sensor.bedroom_motion     # REPLACE
+
+# ── Sections — the visible card grid ─────────────────────────
+# sections: is a sibling of cards:, not nested inside it.
+sections:
+
+  # Row 1: Full-width sensor chip bar (Recipe 5)

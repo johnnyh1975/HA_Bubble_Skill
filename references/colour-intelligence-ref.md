@@ -82,7 +82,7 @@ And which would you like me to generate?"
 
 **Step 3 — Generate:**
 - Take the user's choice → apply from `#accent-swap-recipes` or `#full-palette-recipes`
-- Open `references/casa5heynev2-template.yaml` → apply diff → output complete file
+- Open `theme/Casa5HeyneV2.yaml` → apply diff → output complete file
 - State: recipe name, WCAG scores, filename, installation steps
 
 **Mood → recipe mapping for prescriptive mode:**

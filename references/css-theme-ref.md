@@ -294,7 +294,7 @@ mdc-ripple-color:                "rgba(NR,NG,NB, 0.20)"
 ```yaml
 # One additional line to keep Mushroom in sync with the new accent
 accent-color-rgb: "NR, NG, NB"   # same R,G,B as above — format: bare integers
-# mush-rgb-primary automatically follows via var(--accent-color-rgb)
+# Mushroom follows wherever a state var points at var(--accent-color-rgb)
 ```
 
 Without this line, Bubble Card active states will shift to the new accent
@@ -391,7 +391,7 @@ visible step — cards must be lighter than the page. The current step is
 **Do not use this section to reconstruct a theme.** Use the canonical template:
 
 ```
-references/casa5heynev2-template.yaml
+theme/Casa5HeyneV2.yaml
 ```
 
 Copy that file, rename the top-level key to the new theme name, then apply

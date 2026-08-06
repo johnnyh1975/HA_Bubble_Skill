@@ -15,9 +15,15 @@ On each HA minor release, verify before trusting the skill's guidance:
       (Maintenance/Security dashboards, tile card features, heading card)
 - [ ] Bubble Card / Streamline / Sidebar / Bubble Card Tools version pins
 
+**When verifying a component release, scan the source tree — not the release
+notes and not the editor schemas alone.** Editor-only scans miss every
+YAML-facing option the editor doesn't surface; a `config.*` grep across
+`src/` is the reliable method. The same applies to CSS variables: check the
+actual `var()` fallback chain in source rather than trusting documentation.
+
 ---
 
-## v1.4 — 2026-07-03
+## v1.4 — 2026-08-06
 
 ### Bubble Card version compatibility — v3.2.2 → v3.2.4
 
@@ -172,6 +178,111 @@ Split ownership so each syntax pattern lives in exactly one place:
   custom decisions) and symptoms (rebuilding native features without
   advisory, reproducing paid module code).
 - CHANGELOG: standing per-HA-release verification checklist added (above).
+
+
+### Source-verified scan — Bubble Card v3.2.5 + Mushroom v5.2.2 (2026-08-06)
+
+Full scan of both component source trees, not release notes or docs.
+
+**Bubble Card v3.2.5 (released 2026-07-10):**
+- Version pin raised 3.2.4 → 3.2.5; compat table row added.
+- **Cover tilt support documented** — `tilt_buttons` (top/bottom/left/right/
+  hidden), `open_tilt_service`, `close_tilt_service`, plus
+  `cover_slider_type: position|tilt_position` for slider-driven tilt on both
+  the card slider and slider sub-buttons. Includes the feature-detection rule
+  (only emit tilt options when the entity reports OPEN_TILT / CLOSE_TILT /
+  SET_TILT_POSITION) and two troubleshooting entries.
+- Pop-up fixes noted: shared `hui-card` no longer hidden inside grid/masonry
+  layout boundaries; improved shell detach on leaving editor mode.
+
+**Method fix — the previous scan had a blind spot.** The v3.2.4 verification
+checked editor schemas only, which misses every YAML option not surfaced in
+the editor. A full `config.*` scan of the source found **24 undocumented
+options**, now added:
+- Slider: `slider_value_position`, `relative_slide`, `invert_slider_value`,
+  `hue_force_saturation` + `hue_force_saturation_value`, `cover_slider_type`
+- sub-buttons card: `menu_style`, `labels_below`, `hide_button_labels`,
+  `compact_mode`, `space_between_buttons`, `footer_width` (with the
+  `labels_below` requires `menu_style` gotcha)
+- Calendar: `event_action`, `show_place`, `show_started_events`
+- Core: `show_last_updated`, `sub_button_justify_content`
+- Climate: `hide_temperature`
+
+**Iron Law violation fixed in the skill's own example.** The calendar recipe
+used `color: '#D9BE8B'`. Source shows `color:` resolves a colour *name* to
+`var(--<name>-color)`, so `color: accent` is theme-compliant. Example
+corrected, rule documented, Common Pitfalls row added.
+
+**Mushroom v5.2.2 — two factual errors corrected:**
+- `mush-rgb-state-switch` does not exist. Switch entities are coloured by
+  `mush-rgb-state-entity`. Removed from docs and theme template.
+- `mush-rgb-primary` does not exist. The accent bridge now wires
+  `accent-color-rgb` into the specific state variables instead.
+- Added the missing state groups: vacuum, media-player, lock (+ locked /
+  unlocked / pending), number, humidifier, and update — including the
+  upstream naming inconsistency (`mush-rgb-update-off` and
+  `mush-rgb-update-installing` carry no `state-` segment).
+- Five new Mushroom troubleshooting entries covering these traps.
+
+**Theme divergence resolved.** `theme/Casa5HeyneV2.yaml` and
+`references/casa5heynev2-template.yaml` had drifted: the shipped theme was
+missing the entire ZONE 6 state mapping (45 keys) and its light mode lacked
+every `mush-rgb-*` colour the dark mode had — meaning Mushroom silently fell
+back to its own defaults in light mode. Both files are now aligned and
+YAML-validated, with the corrected (non-existent-variable-free) ZONE 6.
+
+
+### Tooling, coverage and honesty pass (2026-08-06)
+
+**New: `verify.py`** — a dependency-light structural self-check, run from the
+skill root. Eight checks, each of which exists because that bug class shipped
+at least once: anchor integrity, SKILL.md anchor-list sync, YAML validity,
+theme light/dark symmetry, banned (nonexistent) component variables, Iron Law
+in card examples, version-string consistency, orphaned reference files. It
+found five stale anchor-list entries and one version drift on first run.
+
+**New: `references/eval-set.md`** — ten behavioural regression prompts with
+MUST / MUST NOT criteria, run in fresh conversations. Until now every claim
+that a release improved output quality was structural ("the guidance is in the
+file"); this makes it testable and gives future versions a regression baseline.
+
+**Theme de-duplication.** `references/casa5heynev2-template.yaml` deleted;
+`theme/Casa5HeyneV2.yaml` is now the single source for both generation and
+user installation, with all 10 references rewired. The two copies had already
+drifted twice (ZONE 6 missing entirely from the shipped file, mode-specific
+disabled greys differing) — the same failure mode as the deleted
+`dashboard-recipes.md`. `verify.py`'s theme-symmetry check guards the
+remaining risk.
+
+**Test dashboard is now a real smoke test.** Extended from 8 to all 11
+documented card types (added `calendar`, `select`, `empty-column`, plus a
+tilt-enabled cover). Fixed two defects found while doing so: the file claimed
+skill v1.5, and the HBS footer was not the last top-level card — the file
+violated a rule the skill itself enforces.
+
+**Entity domain map extended.** Added `siren`, `remote` and `lawn_mower` (a
+Bubble Card toggle domain with a built-in icon, previously absent), and
+documented `valve`, `water_heater`, `todo` and `image` as having no Bubble
+Card support with the native-card fallback. Added the explicit toggle/slider
+domain lists from v3.2.5 source, so unsupported domains produce an honest
+answer rather than a control that renders but silently does nothing.
+
+**Accessibility — limits stated plainly.** New subsection in §2: Bubble Card's
+div-based controls are not screen-reader operable, sliders expose no role or
+value, tap targets are generally outside the tab order, and pop-ups do not
+trap focus. No card option fixes this, so the guidance is to say so and offer
+native tile cards, voice/Assist or automation instead. Explicit instruction
+never to claim WCAG conformance on the basis of the contrast checks.
+
+**Localisation.** New §2 subsection: generate `name:` labels in the user's
+language, keep navigation hashes ASCII, and let entity friendly names win
+where a voice assistant is in use. Bubble Card localises its editor but not
+dashboard labels — those come from generated YAML.
+
+**Note on Sidebar Card:** a project-health section was considered for parity
+with Streamline's new `#maintenance-status`, but `sidebar-ref.md#known-issues`
+already covers maintenance status, both known issues and the Bubble
+sub-buttons fallback. No change made.
 
 
 ## v1.3 — 2026-06-05
