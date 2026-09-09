@@ -105,7 +105,7 @@ jobs:
           head -5 release-body.md
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/HA_Bubble_Skill_v*.zip
