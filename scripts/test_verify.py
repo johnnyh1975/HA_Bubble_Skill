@@ -110,6 +110,18 @@ def _(tree):
          "(route removed)")
 
 
+@case("stale duplicate file left behind by a sync", "duplicates")
+def _(tree):
+    shutil.copy(tree / "references" / "dashboard-system.md",
+                tree / "references" / "dashboard-recipes.md")
+
+
+@case("reference file nothing routes to", "orphans")
+def _(tree):
+    (tree / "references" / "leftover-notes.md").write_text(
+        "# Notes\n\n" + ("Orphaned content. " * 40), encoding="utf-8")
+
+
 def run_budget(tree: Path):
     proc = subprocess.run([sys.executable, "scripts/token_budget.py", "--check"],
                           cwd=tree, capture_output=True, text=True)

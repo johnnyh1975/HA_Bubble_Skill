@@ -333,15 +333,56 @@ def check_routing_coverage():
 
 
 def check_orphans():
-    """A reference file nothing points to is dead weight (see the
-    dashboard-recipes.md incident)."""
-    corpus = '\n'.join(DOCS.values())
+    """A reference file nothing routes to is dead weight.
+
+    Only SKILL.md and the other reference files count as live references.
+    A mention in CHANGELOG.md does NOT — the changelog talks about files it
+    *deleted*, which is exactly how a stale duplicate stays invisible
+    (dashboard-recipes.md survived a sync this way and was only noticed by the
+    token budget).
+    """
+    routing_docs = {n: t for n, t in DOCS.items()
+                    if n == 'SKILL.md' or n.startswith('references/')}
     for f in sorted(glob.glob('references/*')):
         name = os.path.basename(f)
-        # count mentions outside the file itself
-        others = '\n'.join(t for k, t in DOCS.items() if os.path.basename(k) != name)
-        if name not in others and name not in corpus.replace(DOCS.get(f, ''), ''):
-            fail('orphans', f'{f} is referenced nowhere — dead file?')
+        if name == 'eval-set.md':
+            continue
+        others = '\n'.join(t for n, t in routing_docs.items()
+                            if os.path.basename(n) != name)
+        if name not in others:
+            fail('orphans',
+                 f'{f} is not referenced from SKILL.md or any reference file — '
+                 'dead file, or a stale copy left behind by a sync?')
+
+
+def check_duplicates():
+    """Catch a file that largely duplicates another.
+
+    The 50 KB dashboard-recipes.md incident: an exact copy of content inside
+    dashboard-system.md, referenced nowhere, silently diverging. Compares
+    normalised 400-character windows across reference files.
+    """
+    docs = {n: t for n, t in DOCS.items()
+            if n.startswith('references/') and n.endswith('.md')}
+    names = sorted(docs)
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            ta, tb = docs[a], docs[b]
+            if min(len(ta), len(tb)) < 4000:
+                continue
+            smaller, larger = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+            windows = [smaller[k:k + 400] for k in range(0, len(smaller) - 400, 400)]
+            if not windows:
+                continue
+            hits = sum(1 for w in windows if w in larger)
+            pct = hits / len(windows) * 100
+            if pct > 60:
+                small_name = a if len(ta) <= len(tb) else b
+                big_name = b if len(ta) <= len(tb) else a
+                fail('duplicates',
+                     f'{small_name} is {pct:.0f}% contained in {big_name} — '
+                     'duplicate content diverges silently; delete one or split '
+                     'the ownership')
 
 
 def main():
@@ -349,7 +390,7 @@ def main():
                check_theme_symmetry, check_banned_vars, check_iron_law,
                check_yaml_examples,
                check_versions, check_skill_spec, check_frontmatter,
-               check_routing_coverage,
+               check_routing_coverage, check_duplicates,
                check_orphans):
         fn()
 

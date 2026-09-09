@@ -150,6 +150,46 @@ library.
   `#view-activity-scaffold` at 3,483; median across 162 anchors is 516.
 - `test_verify.py` gained a case for the budget guard: 11/11.
 
+### Two checker bugs found by the checker
+
+CI on the live repository flagged `dashboard-recipes.md#view-activity` at 4,217
+tokens — a file deleted in v1.4. It had survived because the repo was synced
+rather than replaced, exactly the case the v1.4 upgrade note warned about. The
+token budget caught it only by accident, through an oversized anchor.
+
+Two checks that should have caught it directly did not:
+
+- **`check_orphans` counted a CHANGELOG mention as a live reference.** The
+  changelog says "Deleted `dashboard-recipes.md`" — which made the deleted file
+  look referenced. Fixed: only SKILL.md and other reference files count as
+  routing references. Changelog history does not.
+- **No duplicate detection existed at all**, despite a 50 KB exact duplicate
+  being the single largest structural defect in this project's history. New
+  `check_duplicates` compares normalised 400-character windows across
+  reference files and fails above 60% containment.
+
+Both are now regression-tested (`test_verify.py`: 13/13). `verify.py` is at
+13 checks.
+
+The lesson generalises: a check that reads *any* mention as a reference will
+be defeated by the file that documents deletions.
+
+### Link check tuning
+
+The external-link job reported one error: Patreon returns 403 to automated
+requests. The link is correct — Patreon simply blocks bots. Excluded, along
+with `homeassistant.local` (the reader's own LAN address) and `example.com`
+(a placeholder in sample YAML).
+
+The exclusion list is documented in the workflow with the reason for each
+entry, and the standing rule is stated there: exclusions are for links that
+*cannot* be checked, not for links we would rather not fix. A check that
+reports a known false positive every run teaches people to ignore it — which
+is worse than not having it.
+
+The library has 7 unique external links in total, so this check is cheap
+insurance rather than a major safeguard.
+
 ### Repository layout
 
 Repository tooling moved from the skill root into `scripts/`
