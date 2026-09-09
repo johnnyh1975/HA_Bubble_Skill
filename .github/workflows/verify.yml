@@ -94,34 +94,3 @@ jobs:
         with:
           header: token-budget
           message: ${{ steps.delta.outputs.body }}
-
-  links:
-    name: External links
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Advisory only: upstream repos move and rename, and a red X on someone
-    # else's redirect should not block a documentation change.
-    #
-    # Exclusions are for links that cannot be checked, not links we would
-    # rather not fix:
-    #   patreon.com          — 403s automated requests; fine in a browser
-    #   homeassistant.local  — the reader's own LAN address, not a public host
-    #   example.com          — a placeholder in sample YAML
-    # Anything else that fails is a real broken link and should be fixed.
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check links in markdown
-        uses: lycheeverse/lychee-action@v2
-        with:
-          args: >-
-            --no-progress
-            --accept 200,206,429
-            --exclude-path CHANGELOG-v1.4-detail.md
-            --exclude '^https://github\.com/johnnyh1975/HA_Bubble_Skill'
-            --exclude '^https?://(www\.)?patreon\.com'
-            --exclude '^https?://homeassistant\.local'
-            --exclude '^https?://example\.com'
-            '**/*.md'
-          fail: false

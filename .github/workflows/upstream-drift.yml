@@ -57,3 +57,44 @@ jobs:
           else
             gh issue create --title "$TITLE" --body "$BODY" --label upstream
           fi
+
+  links:
+    name: External links
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Advisory only, and deliberately not on push/PR: the library has 7 unique
+    # external links, they do not change per commit, and a rotted link on
+    # someone else's site is no reason to block a pull request.
+    #
+    # Exclusions are for links that cannot be checked, not links we would
+    # rather not fix:
+    #   patreon.com          — 403s automated requests; fine in a browser
+    #   homeassistant.local  — the reader's own LAN address, not a public host
+    #   example.com          — a placeholder in sample YAML
+    #   family=FontName      — the placeholder in the font-loader template
+    # Anything else that fails is a real broken link and should be fixed.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links in markdown
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # Without a token the 13 github.com links hit anonymous rate limits,
+          # and lychee then retries with backoff — that is what made this slow.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: >-
+            --no-progress
+            --cache
+            --max-cache-age 1d
+            --timeout 15
+            --max-retries 1
+            --accept 200,206,429
+            --exclude-path CHANGELOG-v1.4-detail.md
+            --exclude '^https://github\.com/johnnyh1975/HA_Bubble_Skill'
+            --exclude '^https?://(www\.)?patreon\.com'
+            --exclude '^https?://homeassistant\.local'
+            --exclude '^https?://example\.com'
+            --exclude 'family=FontName'
+            '**/*.md'
+          fail: false
