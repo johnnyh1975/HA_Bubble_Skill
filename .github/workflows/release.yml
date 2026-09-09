@@ -1,0 +1,114 @@
+name: release
+
+# The repo has published versions but no GitHub Releases and no tags — every
+# version so far has been a zip passed around by hand. This makes a tag the
+# single action that produces a downloadable, verified bundle.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Never let two releases race; a cancelled half-published release is worse
+# than a queued one.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish the skill bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install "pyyaml==6.0.2"
+
+      # A release must never ship a library that fails its own checks.
+      - name: Verify before packaging
+        run: python3 scripts/verify.py
+
+      # The tag and the version inside SKILL.md must agree, or the bundle
+      # claims to be something it is not.
+      - name: Check tag matches SKILL.md metadata
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          SKILL_VERSION=$(python3 - <<'PY'
+          import re
+          text = open('SKILL.md', encoding='utf-8').read()
+          block = re.search(r'(?ms)^metadata:\n(.*?)^---', text).group(1)
+          print(re.search(r'^\s*version:\s*([\d.]+)', block, re.M).group(1))
+          PY
+          )
+          echo "tag=$TAG  SKILL.md=$SKILL_VERSION"
+          if [ "$TAG" != "$SKILL_VERSION" ]; then
+            echo "::error::Tag v$TAG does not match SKILL.md version $SKILL_VERSION"
+            exit 1
+          fi
+
+      - name: Build bundle
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist/HA_Bubble_Skill
+          # The bundle is what users install as a skill. Repository tooling
+          # and development history are not part of it.
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'dist' \
+                   --exclude '__pycache__' --exclude '.DS_Store' \
+                   --exclude 'scripts' \
+                   --exclude 'CHANGELOG-v*-detail.md' \
+                   --exclude 'RELEASE_NOTES_v*.md' \
+                   ./ dist/HA_Bubble_Skill/
+          cd dist
+          zip -rq "HA_Bubble_Skill_v${VERSION}.zip" HA_Bubble_Skill
+          # Same tree as a .skill bundle, for direct install.
+          cp "HA_Bubble_Skill_v${VERSION}.zip" "ha-bubble-dashboard-v${VERSION}.skill"
+          ls -la
+
+      # The bundle ships without scripts/, so run the checker from the repo
+      # against the packaged tree rather than from inside it.
+      - name: Verify the packaged copy
+        run: |
+          cp -r scripts dist/HA_Bubble_Skill/scripts
+          (cd dist/HA_Bubble_Skill && python3 scripts/verify.py)
+          rm -rf dist/HA_Bubble_Skill/scripts
+          # Re-zip without the temporary scripts copy
+          VERSION="${GITHUB_REF_NAME#v}"
+          rm -f "dist/HA_Bubble_Skill_v${VERSION}.zip" \
+                "dist/ha-bubble-dashboard-v${VERSION}.skill"
+          (cd dist && zip -rq "HA_Bubble_Skill_v${VERSION}.zip" HA_Bubble_Skill \
+             && cp "HA_Bubble_Skill_v${VERSION}.zip" \
+                   "ha-bubble-dashboard-v${VERSION}.skill")
+
+      # body_path: CHANGELOG.md would paste all 480+ lines of history into
+      # every release. Extract just this version's section.
+      - name: Extract this version's changelog section
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          python3 - "$VERSION" <<'PY' > release-body.md
+          import re, sys
+          version = sys.argv[1]
+          text = open('CHANGELOG.md', encoding='utf-8').read()
+          m = re.search(rf'(?ms)^## v{re.escape(version)}\b.*?(?=^## v\d)', text)
+          if not m:
+              sys.exit(f'No changelog section found for v{version}')
+          print(m.group(0).rstrip())
+          PY
+          head -5 release-body.md
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/HA_Bubble_Skill_v*.zip
+            dist/ha-bubble-dashboard-v*.skill
+          body_path: release-body.md
+          generate_release_notes: false

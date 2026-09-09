@@ -1,0 +1,117 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only: this workflow inspects the repo, it never writes to it.
+permissions:
+  contents: read
+
+# A new push to a PR makes the previous run irrelevant.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Structural self-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install "pyyaml==6.0.2"
+
+      # The whole point of verify.py is that it runs before anything ships.
+      # Twelve checks; each exists because that bug class shipped at least once.
+      - name: Run verify.py
+        run: python3 scripts/verify.py
+
+      # A checker that only ever passes proves nothing. This injects each bug
+      # class into a throwaway copy and asserts verify.py still catches it.
+      - name: Self-test the guards
+        run: python3 scripts/test_verify.py
+
+      # SKILL.md is loaded in full for every request, so its size is a tax on
+      # every session — unlike the reference files, which only cost what is
+      # actually read. This guards that one number against quiet creep.
+      - name: Token budget
+        run: python3 scripts/token_budget.py --check
+
+  budget-delta:
+    name: Token budget delta
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compare SKILL.md against the base branch
+        id: delta
+        run: |
+          python3 scripts/token_budget.py --json > head.json
+          git worktree add /tmp/base "${{ github.event.pull_request.base.sha }}"
+          if [ -f /tmp/base/token_budget.py ]; then
+            (cd /tmp/base && python3 scripts/token_budget.py --json) > base.json
+          else
+            echo '{"now":{"skill_md":0,"runtime_total":0}}' > base.json
+          fi
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          head = json.load(open('head.json'))['now']
+          base = json.load(open('base.json'))['now']
+          d = head['skill_md'] - base['skill_md']
+          pct = (d / base['skill_md'] * 100) if base['skill_md'] else 0.0
+          verdict = ('no change to the per-session cost' if d == 0 else
+                     f"{d:+,} tokens ({pct:+.1f}%) on the file every session loads")
+          print(f"body<<EOF")
+          print(f"**Token budget** — SKILL.md {base['skill_md']:,} → "
+                f"{head['skill_md']:,}: {verdict}.")
+          print(f"Runtime library total: {base['runtime_total']:,} → "
+                f"{head['runtime_total']:,} (anchor-routed, only read when needed).")
+          print("EOF")
+          PY
+
+      - name: Comment on the PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: token-budget
+          message: ${{ steps.delta.outputs.body }}
+
+  links:
+    name: External links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Advisory only: upstream repos move and rename, and a red X on someone
+    # else's redirect should not block a documentation change.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links in markdown
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --accept 200,206,429
+            --exclude-path CHANGELOG-v1.4-detail.md
+            --exclude '^https://github\.com/johnnyh1975/HA_Bubble_Skill'
+            '**/*.md'
+          fail: false

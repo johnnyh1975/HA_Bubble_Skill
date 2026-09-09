@@ -1,0 +1,59 @@
+name: upstream-drift
+
+# The recurring failure mode of this skill is not a broken file — it is
+# guidance that quietly goes stale when a component ships a release. This job
+# watches for that so nobody has to remember to.
+
+on:
+  schedule:
+    # Mondays 06:00 UTC. HA releases on the first Wednesday of the month;
+    # weekly catches component releases that land any time.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: upstream-drift
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Compare pins against upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check component pins
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python3 scripts/check_upstream.py | tee report.txt
+          echo "drift=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update a drift issue
+        if: steps.check.outputs.drift == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Component pins are behind upstream"
+          BODY=$(printf '%s\n\n%s\n' \
+            "$(cat report.txt)" \
+            "Reminder: scan the component **source tree**, not the release notes and not the editor schemas alone. Editor-only scans have missed YAML-facing options twice. See the *Standing check* section at the top of CHANGELOG.md.")
+
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" \
+                      --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY" --label upstream
+          fi

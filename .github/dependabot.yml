@@ -1,1 +1,12 @@
-
+version: 2
+updates:
+  # Third-party actions are the main supply-chain surface here. Dependabot
+  # keeps the version tags current; pin to a commit SHA instead if you want
+  # the stricter guarantee (Dependabot updates SHA pins too).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
