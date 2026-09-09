@@ -401,7 +401,7 @@ and Bubble Card mappings.
 
 **Delivery steps (always include these):**
 1. Place the `.yaml` file in `/config/themes/`
-2. Run `frontend.reload_themes` (Developer Tools → Actions → search "reload themes")
+2. Run `frontend.reload_themes` (**Tools** → Actions → search "reload themes")
 3. Select the theme: Profile → Theme → `{ThemeName}`
 
 **Naming convention:** `Casa5HeyneV2-{Variant}.yaml` — e.g. `Casa5HeyneV2-Slate.yaml`.

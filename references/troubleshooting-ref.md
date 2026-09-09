@@ -34,12 +34,12 @@ resources.
 |---------|-------|-----|
 | Card changes not visible | Browser cache | Hard refresh: Ctrl+Shift+R (Win/Linux) or Cmd+Shift+R (Mac) |
 | Streamline template "not found" after adding | Old JS bundle cached | Hard refresh + HA restart |
-| New theme not in profile dropdown | Theme not loaded | Developer Tools → Actions → `frontend.reload_themes` |
+| New theme not in profile dropdown | Theme not loaded | **Tools** → Actions → `frontend.reload_themes` |
 | Custom card missing after HACS install | Resource not registered or cached | Clear cache + HA restart |
 | Module changes not taking effect | Bubble Card Tools cache | Hard refresh; if persistent, HA restart |
 
 **Run `#first-steps` first.** Then:
-1. Developer Tools → Actions → `frontend.reload_themes` (theme-related)
+1. **Tools** → Actions → `frontend.reload_themes` (theme-related)
 2. Restart Home Assistant (if custom card or Streamline template issue)
 3. Clear browser storage: DevTools → Application → Storage → Clear site data
 
@@ -56,7 +56,7 @@ resources.
 | Theme loads but Bubble Cards use wrong colours | `--bubble-*` variables not pointing to `var(--primary-color)` | Check `bubble-accent-color` in global section — must be `"var(--primary-color)"` not a hex value |
 | Light/dark colours swapped | `modes.light`/`modes.dark` content accidentally transposed | Compare background-color values: light should be `#F8F8F8`, dark should be `#202631` |
 | Theme applies to HA but not Bubble Cards | Bubble Card version mismatch with CSS variable names | Check `bubble-card-ref.md#version-compat` — some variables changed between v3.0 and v3.2 |
-| `frontend.reload_themes` action not found | HA version < 2023.x | Use Developer Tools → Services (deprecated UI) → `frontend.reload_themes` |
+| `frontend.reload_themes` action not found | HA version < 2023.x | Use Developer Tools → Services (pre-2026.8 UI) → `frontend.reload_themes` |
 | Alexandria font not loading | `extra_module_url` missing or font JS file absent | Add to `configuration.yaml`: `frontend: extra_module_url: - /local/alexandria-font.js` — verify file exists at `/config/www/alexandria-font.js` |
 
 **Diagnostic steps:**
@@ -115,7 +115,7 @@ resources.
 | `bottomCard` fails on refresh (`setConfig is not a function`) | Known v0.1.9.9 bug | Refresh page again. For critical content, use a Bubble Card sub-buttons footer instead. |
 | `showTopMenuOnMobile` not working | HA 2026.1 mobile overhaul changed behaviour | Test on the installed HA version. May need `hideHassSidebar: false` as workaround. |
 | Sidebar overlaps content | Width too large | Reduce `width.desktop` from default — try `18` or `20` percent |
-| Template messages not updating | Jinja2 template syntax error | Test template in Developer Tools → Template first |
+| Template messages not updating | Jinja2 template syntax error | Test template in **Tools** → Template first |
 | Clock not showing | `clock: true` or `digitalClock: true` not set | Both are `false` by default — explicitly set one to `true` |
 
 ---
@@ -147,6 +147,7 @@ resources.
 | Pre-v3.2 → v3.2+ | Pop-up format completely changed | Pop-ups must be standalone top-level cards with `cards:` block. The UI shows a migration prompt — use it, then review generated YAML. |
 | Pre-v3.2 → v3.2+ | `bubble-pop-up-fix.js` removed | Remove any reference to this script from resources. |
 | Pre-v3.2 → v3.2+ | Pop-up modes added | Existing pop-ups get `popup_mode: default` automatically. Optionally migrate to `fit-content` or `centered` where appropriate. |
+| Pre-v3.3.0 → v3.3.0+ | Platform conditions (`condition: sun.is_up` etc.) did not exist; `grid_options` unsupported | On older versions an unknown condition type silently falls back to a state check — it does not error, it just misbehaves. Only generate platform conditions for v3.3.0+. |
 | Pre-v3.2.5 → v3.2.5+ | Cover tilt options (`tilt_buttons`, `open_tilt_service`, `close_tilt_service`, `cover_slider_type: tilt_position`) did not exist | Silently ignored on older versions — the card renders without tilt controls. Update to v3.2.5+. No YAML change needed beyond adding the options. |
 | Pre-v3.2.4 → v3.2.4+ | Pop-ups nested in `vertical-stack`/`vertical-stack-in-card` were unreliable (create/edit/remove/duplicate/move could break) | Update to v3.2.4+ if this pattern is in use. No YAML change required — it's a rendering/editor fix. |
 
@@ -166,7 +167,18 @@ resources.
 | Cause | Fix |
 |-------|-----|
 | A `card_type: pop-up` was added directly inside another pop-up's `cards:` block | Always unsupported, at every version. Move the inner pop-up out to be its own top-level card, and `navigate` to it (e.g. `tap_action: navigate, navigation_path: "#inner-hash"`) instead of nesting it. |
-| Tilt buttons configured but not showing on a cover card | The entity does not report tilt support. Bubble Card only renders tilt controls when `supported_features` includes `OPEN_TILT`, `CLOSE_TILT` or `SET_TILT_POSITION` — the editor hides the whole panel too. Check the entity's `supported_features` in Developer Tools; if the integration doesn't expose tilt, no card option can add it. |
+| A card renders as a red box saying "Custom element doesn't exist: mini-graph-card" / "…: statistics-graph-chart-card" | The graph card is a separate HACS install. Install it and hard-refresh, or replace it with the native `history-graph` / `statistics-graph` card — same data, less styling. See `graphs-ref.md#graph-decision`. |
+| Advanced History panel shows "Install using HACS" instead of a graph | The panel renders through Statistics Graph Chart Card and needs it at **v3.32+** (v4.02+ for multiple panels). Install or update the card, then hit Retry. |
+| A long time range in a graph comes back empty | The entities have no long-term statistics, which requires `state_class` on the sensor. No card option fixes this — it is a sensor definition change, so hand off to ha-yaml. Short ranges still work because they read raw recorder history. |
+| Dashboard becomes sluggish after adding graphs | High-frequency sensors (power, prices, network counters) pulled through raw history. Set `data_source: statistics` on those entities, or use `group_by: date|week|month|year`, which fetches native statistics periods. See `graphs-ref.md#graph-performance`. |
+| A vacuum card's battery sub-button shows nothing after updating to HA 2026.8 | The deprecated `battery_level` attribute was removed from vacuum entities in HA 2026.8. Point the sub-button at the vacuum's separate battery **sensor** entity with `show_state: true` instead of `attribute: battery_level`. Affects LG ThinQ, Neato, Romy, Shark IQ, SwitchBot Cloud, Template, TP-Link and Xiaomi Miio vacuums. |
+| A device appears twice on a dashboard after updating to HA 2026.8 | HA now keeps one device entry per integration instead of merging devices set up through two integrations. Entities were moved to the right device automatically. Card YAML using `entity:` is unaffected; only configs referencing a device by ID need a second look. |
+| A card shows "Entity not available" and nothing in the YAML changed | Someone likely renamed the entity ID — a two-click operation in the UI since HA 2026.8. HA's repair flow covers automations and scripts, not Lovelace. See `dashboard-system.md#entity-rename-risk`. |
+| Editor is suddenly in English after a manual update to v3.3.0 | The `translations/` folder was removed in v3.3.0. Copy `bubble-card-<lang>.json` from `dist/` to sit beside `bubble-card.js`, then clear the browser cache. HACS installs fix this automatically. |
+| "Custom element doesn't exist" after updating to v3.3.0 | Stale dashboard resource path pointing at the old file layout. Re-download via HACS (three dots → Redownload), then hard-refresh. |
+| A `visibility:` condition always evaluates false and logs an unsupported-condition warning | The condition type is not recognised — a typo, or a platform condition on Bubble Card < 3.3.0. Check the version first; the fallback is a silent state check, so the card may render at the wrong times rather than not at all. |
+| A `for:` duration in a condition fires earlier than expected | Bubble Card evaluates conditions client-side and derives `for:` from `last_changed`/`last_updated`, without the recorder priming pass HA uses server-side. Expect drift on conditions that were already true before the last state change. |
+| Tilt buttons configured but not showing on a cover card | The entity does not report tilt support. Bubble Card only renders tilt controls when `supported_features` includes `OPEN_TILT`, `CLOSE_TILT` or `SET_TILT_POSITION` — the editor hides the whole panel too. Check the entity's `supported_features` in **Tools** → States; if the integration doesn't expose tilt, no card option can add it. |
 | Tilt slider moves the cover position instead of the tilt angle | `cover_slider_type` is missing or set to `position`. Set `cover_slider_type: tilt_position` on the card or slider sub-button (v3.2.5+). |
 | Mushroom switch entities ignore a `mush-rgb-state-switch` override | That variable does not exist in Mushroom. Switches are coloured by `mush-rgb-state-entity` — set that instead. |
 | Mushroom cards ignore a `mush-rgb-primary` override | Also nonexistent. Wire the accent through the specific state variables (usually `mush-rgb-state-entity`) via `accent-color-rgb`. |
@@ -276,7 +288,7 @@ When stuck and the specific symptom isn't listed above, run through:
 | Sub-button background always grey | `state_background: false` set, or entity is unavailable | Check entity is available; set `state_background: true` for state-coloured background |
 | Sub-button width wrong on bottom | `fill_width: true` (default) stretches each item | Set `fill_width: false` for chip-style buttons in a bottom group |
 | Slider sub-button not draggable | `read_only_slider: true` set | Remove or set to `false` to enable interaction |
-| Select sub-button shows no options | `select_attribute:` value doesn't match a real attribute | Check actual attribute name in Developer Tools → States → entity |
+| Select sub-button shows no options | `select_attribute:` value doesn't match a real attribute | Check actual attribute name in **Tools** → States → entity |
 | Bottom group not inline | `buttons_layout: inline` not set | Add `buttons_layout: inline` to the bottom group object |
 
 **Quick sub-button structure reference:**
@@ -304,7 +316,7 @@ sub_button:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Card shows old state after entity changes | HA WebSocket connection dropped | Reload the page (not hard refresh) — WebSocket reconnects automatically |
-| Card permanently stuck on one state | Entity unavailable in HA | Check HA Developer Tools → States — if state shows "unavailable", the integration has a problem, not the dashboard |
+| Card permanently stuck on one state | Entity unavailable in HA | Check HA **Tools** → States — if state shows "unavailable", the integration has a problem, not the dashboard |
 | Streamline card not updating | `_javascript` expression error returning `undefined` | Open browser console — JS errors from Streamline are logged there. Add null safety: `states['entity']?.state ?? 'off'` |
 | Pop-up content not updating when open | Pop-up renders cards on open; some cards don't auto-refresh | Add `background_update: true` on any Bubble Card inside a pop-up that must update live (note: increases resource use) |
 | Sensor value updating in HA but not on card | Card render is throttled | This is expected — Lovelace throttles renders. Not a bug. |

@@ -212,6 +212,55 @@ Note the prompt *hands over* the hex, which is the hard case.
 
 ---
 
+## #eval-11-platform-condition
+
+**Prompt:**
+> Ich möchte, dass die Terrassenbeleuchtungs-Karte nur angezeigt wird, wenn die
+> Sonne untergegangen ist.
+
+**MUST:**
+- Use `visibility:` with a condition — never a `styles:` display hack.
+- If a platform condition (`condition: sun.is_up` with `not`, or
+  `sun.is_set`) is used, state that it needs Bubble Card v3.3.0+.
+- Generate the labels in German (this prompt also exercises eval-8).
+
+**MUST NOT:**
+- Generate an automation to hide the card.
+- Use a platform condition without any version caveat — on < 3.3.0 it
+  degrades to a silent state check rather than erroring.
+
+**Tests:** `bubble-card-ref.md` condition table, Signal Scan version gate.
+
+---
+
+## #eval-12-graph-request
+
+**Prompt:**
+> Ich hätte gern eine Übersichtsseite mit Graphen für Stromverbrauch,
+> Temperatur in allen Räumen und Luftfeuchtigkeit — damit ich alles im Blick
+> habe.
+
+**MUST:**
+- Note that graphs are deep-engagement content and do not belong on a
+  glanceable Overview surface.
+- Offer the **Advanced History** panel as an alternative to building a graph
+  wall, or propose the Activity-view pattern (graphs behind a conditional).
+- Name the HACS dependency of whichever graph card is proposed, and its
+  native fallback.
+- For the power sensor, mention `data_source: statistics` or statistics-based
+  `group_by` (high-frequency sensor, database load).
+- German labels.
+
+**MUST NOT:**
+- Generate a dozen graph cards on an Overview view without comment.
+- Recommend SGCC without mentioning that it ships as a minified bundle when
+  the user is being asked to take on a new dependency.
+
+**Tests:** `graphs-ref.md#graph-decision`, `#graph-performance`,
+`#advanced-history`, engagement-type model, dependency declaration.
+
+---
+
 ## Scoring
 
 | Result | Meaning |

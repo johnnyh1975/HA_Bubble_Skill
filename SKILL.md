@@ -8,14 +8,16 @@ description: >
   SYMPTOMS: hardcodes hex in YAML · uses pre-v3.2 pop-up format · places pop-up or HBS inside sections: · generates themes from scratch · uses masonry view · skips UI-mode question for Streamline · omits JS font loader · generates automations instead of navigate actions · rebuilds native HA features without advisory · reproduces paid Patreon module code.
 
 metadata:
-  version: 1.4
-  bubble_card: "3.2.5"
+  version: 1.6
+  bubble_card: "3.3.0"
   streamline_card: "0.2.2"
   sidebar_card: "0.1.9.9"
   bubble_card_tools: "1.0.2"   # confirmed current — checked 2026-07-03
   ha_minimum: "2024.3.0"
-  ha_checked: "2026.7"
-  mushroom: "5.2.2"           # verified against Mushroom source        # guidance verified against HA release notes up to 2026.7
+  ha_checked: "2026.9"       # guidance verified against HA release notes
+  mushroom: "5.2.2"           # verified against Mushroom source
+  sgcc: "4.02-era"            # README-documented only — minified bundle
+  advanced_history: "2.0.1"
 ---
 
 # HA Dashboard UX
@@ -46,10 +48,39 @@ Ask before generating both modes: see §3a for the decision question.
 
 ---
 
+## Signal Scan — run before answering anything
+
+Independent of *what* is being built. Scan the request for these; several can
+apply at once. Each one changes the answer, and none of them is visible from
+the output type alone — which is why they come first.
+
+| Signal in the request | Do this before generating |
+|---|---|
+| Written in a language other than English | Generate `name:` labels in that language. Hashes stay ASCII. (§2 Language) |
+| Accessibility need stated — screen reader, blind, keyboard-only, motor impairment | §2 Accessibility. State the div-based limits honestly, offer native tiles / Assist / automation. Never claim WCAG conformance. |
+| Asks for battery levels, a security or door log, a weather forecast, or full media transport | Raise the native HA equivalent as **Advisory** — `dashboard-system.md#native-first`. Build it anyway if they want it. |
+| The control could be replaced by an automation (motion light, sunset blind, humidity fan) | Automate-first question. Advisory, never a gate. |
+| Names an entity domain outside Bubble's toggle/slider lists — `valve`, `water_heater`, `todo`, `image` | `bubble-card-ref.md#entity-domain-map`. Offer the native tile or an explicit `call-service`; never emit a toggle that silently does nothing. |
+| Asks to recreate a paid module — Bubble Weather, Badges 2, Custom Dropdown… | Never reproduce. Explain, route to the Module Store/Patreon, or author an original (`module-authoring-ref.md`). |
+| Mentions renaming entities or tidying entity IDs (easy in the UI since HA 2026.8) | Dashboard YAML does not follow renames and fails silently. `dashboard-system.md#entity-rename-risk` — rename first, then repair the dashboard. |
+| Pastes existing dashboard YAML | §9 Health-Check Mode — audit, don't regenerate. |
+| Mentions a fixed display — wall panel, kiosk, tablet on the wall | Single-mode theme + `#device-type-profiles` + `#wall-panel-hardening`. |
+| Asks for a card to appear only under some condition — sun, motion, heating, presence | `visibility:` with a condition. Platform conditions (`condition: sun.is_up`) need Bubble Card v3.3.0+; on older versions they degrade silently. Check the version before generating them. |
+| Asks for a graph, chart, history or trend | `graphs-ref.md#graph-decision` first — and ask which graph card they already have before proposing a new dependency; mini-graph-card and SGCC sparkline do the same job — pick the smallest card that answers the question, and name the HACS dependency plus its native fallback. A graph is Bucket 3 content: it belongs on Activity, not Overview. |
+| Wants to "see the history of everything" / a page full of graphs | Offer the **Advanced History** panel (`graphs-ref.md#advanced-history`) instead of building graph cards. Exploration tools do not belong on a glanceable dashboard. |
+| Mentions Mushroom colours not following the accent | ZONE 6 bridge: `accent-color-rgb` → state variables. No `mush-rgb-primary`, no `mush-rgb-state-switch`. |
+
+**None of these is a refusal.** They add a sentence or a question to the
+answer — they never withhold the output the user asked for.
+
+---
+
 ## The Process
 
 ```
 User request
+    │
+    ├── SIGNAL SCAN FIRST (table above) — may add a question or an advisory
     │
     ├── repair / debug / "not working"? → troubleshooting-ref.md (see anchor table below)
     ├── font / typography?              → typography-ref.md#architecture first
@@ -61,13 +92,25 @@ User request
     ├── write/edit a Bubble Card        → bubble-card-ref.md#module-authoring first
     │    module or its editor form?       (structure), then module-authoring-ref.md
     │                                     (field catalog, object selector, sharing format)
+    ├── user describes a *situation*,   → don't guess a card type. Name the
+    │    not a card ("my kid keeps          engagement type first (§2), then
+    │    leaving the light on")             re-enter this tree — the answer may
+    │                                       be an automation handoff, not a card
     └── card / dashboard / navigation?  → continue ↓
 
 Identify output type
   ├── Pop-up           → bubble-card-ref.md#version-compat + #pop-up
   ├── Button / slider  → bubble-card-ref.md#button
+  ├── Chip bar / footer
+  │    menu / icon row  → bubble-card-ref.md#sub-buttons (+ #sub-buttons-only)
   ├── Media player     → bubble-card-ref.md#media-player
   ├── Climate / cover  → bubble-card-ref.md#climate or #cover
+  │                      (tilt → #cover, needs v3.2.5+)
+  ├── Graph / chart /
+  │    history / trend  → graphs-ref.md#graph-decision — pick the smallest card
+  ├── Calendar         → bubble-card-ref.md#calendar — colour NAMES, never hex
+  ├── Select / dropdown→ bubble-card-ref.md#select
+  ├── Separator        → bubble-card-ref.md#separator
   ├── HBS footer       → bubble-card-ref.md#horizontal-buttons-stack
   ├── Sidebar Card     → sidebar-ref.md#known-issues + #combined-example
   ├── Streamline       → ask UI-mode or YAML-mode first, then streamline-ref.md
@@ -83,6 +126,7 @@ Entity domain unclear?  → bubble-card-ref.md#entity-domain-map
 UI-mode or YAML-mode?   → ask if Streamline or full dashboard
 Mobile / desktop / both? → ask if full dashboard or nav question
 Generate → checklist (§8) → deliver
+Signals from the scan unresolved? → resolve before delivering, not after
 ```
 
 **Troubleshooting quick-route** (read troubleshooting-ref.md anchor):
@@ -116,14 +160,10 @@ Generate → checklist (§8) → deliver
 | "Sidebar Card has no issues on HA 2026" | CAUTION. bottomCard has an intermittent setConfig bug. showTopMenuOnMobile behaviour changed in HA 2026.1. Test after install. |
 | "Clicking a button inside pop-up A should open pop-up B directly" | CHANGED in v3.2.x. Navigating from one open pop-up to another now closes the first pop-up — a second tap is required to open the next. Workaround: add a dismiss button to each pop-up, or use `close_by_clicking_outside: false` to prevent accidental dismissal while navigating. |
 | "I swapped the accent, Bubble Card updated but Mushroom is still blue" | EXPECTED without ZONE 6 update. Set `accent-color-rgb: "NR,NG,NB"` in the mode-independent block. Mushroom only follows where a state variable points at `var(--accent-color-rgb)` — there is no `mush-rgb-primary`. |
-| "I'll generate both light and dark mode for this wall panel" | ASK FIRST. Fixed-display setups (wall panels, kiosks) need single-mode themes. Generating both wastes maintenance surface and risks accidental mode switching. |
 | "I'll just update the font variables in the theme" | INCOMPLETE. Font changes also require a JS loader file at /config/www/ and an extra_module_url entry in configuration.yaml. Theme variables alone have no effect without the loader. |
 | "I'll generate automations for this dashboard button" | STOP. Send the user to ha-yaml for the automation. Only generate the navigate tap_action here. |
 | "A button card is fine for this fan/vacuum/lock" | CHECK. Use bubble-card-ref.md#entity-domain-map first — complex domains need sub-button patterns, not a plain switch button. |
-| "I'll add a card for every device I have" | STOP. Ask whether automation already handles it. The dashboard is for what automation cannot do — every unnecessary card competes for attention with the ones that matter. |
-| "I'll build a battery grid / security log / weather forecast section" | CHECK FIRST. Native HA covers these since 2026.5/2026.6 (Maintenance dashboard, Security Activity list, weather + media tile features). Raise as Advisory — see dashboard-system.md#native-first. |
 | "It's a calendar entity colour, hex is fine there" | NO. `color:` accepts a colour **name** which resolves to `var(--<name>-color)`. Use `color: accent`, never a hex. The Iron Law has no calendar exception. |
-| "The user wants Bubble Weather / Badges 2 — I'll recreate it" | STOP. Paid Patreon modules are never reproduced. Explain, route to the Module Store/Patreon, or author an original module instead (module-authoring-ref.md). |
 
 ---
 
@@ -134,15 +174,22 @@ Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 **bubble-card-ref.md** — any Bubble Card YAML:
 `#version-compat`★ · `#pop-up` · `#button` · `#sub-buttons` · `#horizontal-buttons-stack` · `#media-player` · `#climate` · `#cover` · `#select` · `#separator` · `#calendar` · `#sub-buttons-only` · `#css-variables` · `#js-templates` · `#modules` · `#module-authoring` · `#actions` · `#entity-domain-map`★ · `#touch-targets`
 
+**health-check-ref.md** — auditing pasted dashboard YAML (§9):
+`#parse-steps`★ · `#finding-types`★ · `#output-format`★ · `#tone-guides` · `#partial-yaml`
+The three starred anchors are the core path; the other two are situational.
+
+**graphs-ref.md** — any graph, chart or history request:
+`#graph-decision`★ · `#sgcc-status` · `#sgcc-dashboard-use` · `#graph-performance` · `#advanced-history`
+
 **eval-set.md** — behavioural regression tests. Not read during normal
 operation; used when validating a skill release.
-`#eval-1-native-first` · `#eval-2-calendar-iron-law` · `#eval-3-cover-tilt` · `#eval-4-paid-module` · `#eval-5-mushroom-switch-colour` · `#eval-6-masonry-migration` · `#eval-7-automate-first` · `#eval-8-language` · `#eval-9-accessibility` · `#eval-10-unsupported-domain`
+`#eval-1-native-first` · `#eval-2-calendar-iron-law` · `#eval-3-cover-tilt` · `#eval-4-paid-module` · `#eval-5-mushroom-switch-colour` · `#eval-6-masonry-migration` · `#eval-7-automate-first` · `#eval-8-language` · `#eval-9-accessibility` · `#eval-10-unsupported-domain` · `#eval-11-platform-condition` · `#eval-12-graph-request`
 
 **module-authoring-ref.md** — writing a Bubble Card module's `editor:` schema,
 or packaging/sharing a module: `#basic-structure` · `#field-properties` ·
 `#field-types` · `#condition-selector` · `#object-selector`★ (groups /
 conditional fields / variants) · `#advanced-structure` · `#legacy-fields` ·
-`#best-practices` · `#complete-example` · `#sharing-a-module`. Read
+`#module-performance` · `#module-suggestions` · `#best-practices` · `#complete-example` · `#sharing-a-module`. Read
 bubble-card-ref.md#module-authoring first for the module's top-level structure
 — this file is only the `editor:` field catalog and the export format.
 
@@ -172,7 +219,7 @@ bubble-card-ref.md#module-authoring first for the module's top-level structure
 `#first-steps`★ · `#cache-issues` · `#theme-not-applying` · `#popup-not-opening` · `#streamline-not-found` · `#sidebar-not-showing` · `#bubble-styling-ignored` · `#version-migration` · `#hbs-not-ordering` · `#sections-layout-issues` · `#sub-buttons-not-showing` · `#card-state-stale` · `#font-not-loading` · `#popup-z-index` · `#cardmod-overflow-clipping` · `#nested-popup-warning` · `#general-diagnostic-checklist`★
 
 **dashboard-system.md** — architecture, workflow, native-first check, device profiles, migration, view scaffolds:
-`#system-overview`★ · `#native-first` · `#navigation-layer` · `#classification-output` · `#full-dashboard-workflow` · `#entity-inventory` · `#device-type-profiles` · `#wall-panel-hardening` · `#sections-anatomy` · `#multi-view-design` · `#panel-view` · `#masonry-migration` · `#native-interop` · `#view-overview` · `#view-rooms` · `#view-scenes` · `#view-activity` · `#view-settings` · `#extension-energy` · `#extension-music`
+`#system-overview`★ · `#native-first` · `#navigation-layer` · `#classification-output` · `#full-dashboard-workflow` · `#entity-rename-risk` · `#entity-inventory` · `#device-type-profiles` · `#wall-panel-hardening` · `#sections-anatomy` · `#multi-view-design` · `#panel-view` · `#masonry-migration` · `#native-interop` · `#view-overview` · `#view-rooms` · `#view-scenes` · `#view-scenes-scaffold` · `#view-activity` · `#view-activity-scaffold` · `#view-settings` · `#extension-energy` · `#extension-music`
 
 **recipes-extended.md** — room pop-up patterns + core recipes 1–6:
 `#security-popup` · `#energy-view` · `#vacuum-popup` · `#presence-panel` · `#bathroom-popup` · `#garage-popup` · `#office-popup` · `#streamline-templates-extended` · `#recipe-1-room-popup` · `#recipe-2-hbs` · `#recipe-3-media-player` · `#recipe-4-climate` · `#recipe-5-chip-bar` · `#recipe-6-streamline`
@@ -203,6 +250,15 @@ bubble-card-ref.md#module-authoring first for the module's top-level structure
 | Component | Type | HACS search term | Adds |
 |-----------|------|-----------------|------|
 | Mushroom | Frontend | `Mushroom` | Chip cards, compact entity cards. Fully integrated with the Casa5HeyneV2 theme via the Mushroom ↔ HA ZONE 6 bridge. Without it, mushroom-theme-ref.md applies only if Mushroom is already installed. |
+| mini-graph-card | Frontend | `mini-graph-card` | Compact history graphs — small, open source, auditable. The placeholder in the Activity view and Energy extension scaffolds. Substitute the native `history-graph` / `statistics-graph` if the user wants no dependency. |
+| Statistics Graph Chart Card | Frontend | `Statistics Graph Chart Card` (custom repo if not found: `https://github.com/cataseven/Statistics-Graph-Chart-Card`) | Feature-rich graphs — multiple entities, dual axes, period comparison, 13 chart modes, plus a chrome-free `sparkline` mode. Only when the graph needs more than mini-graph-card gives. Ships as a minified bundle — see `graphs-ref.md#sgcc-status`. |
+| Advanced History | Integration | `Advanced History` | Sidebar panel for ad-hoc history exploration, rendered with SGCC (requires it, v3.32+). Often the better answer than adding graph cards. See `graphs-ref.md#advanced-history`. |
+
+> **Declare the dependency before generating.** If a view you are about to
+> generate uses `custom:mini-graph-card`, say so and offer the native
+> alternative in the same breath — a card whose custom element is missing
+> renders as a red error box, and the user has no way to tell from the YAML
+> that an install step was implied.
 
 > **Mushroom is not required** for Bubble Card dashboards. Install it only if
 > you want Mushroom chip bars or entity cards alongside Bubble Card. If installed,
@@ -211,6 +267,10 @@ bubble-card-ref.md#module-authoring first for the module's top-level structure
 ### Installation order
 
 1. Install **Bubble Card** via HACS → Frontend. Clear browser cache.
+   *Manual installs, v3.3.0+ only:* the editor dictionaries no longer live in a
+   `translations/` folder. Delete the old folder, and if you want a localised
+   editor, copy `bubble-card-<lang>.json` from `dist/` next to `bubble-card.js`.
+   HACS users need do nothing — the resource path is fixed on update.
 2. Install **Bubble Card Tools** via HACS → Integrations. Restart HA. Add the
    integration: Settings → Devices & Services → Add Integration → "Bubble Card Tools".
    This creates `/config/bubble_card/modules/` for module YAML files.
@@ -238,7 +298,7 @@ bubble-card-ref.md#module-authoring first for the module's top-level structure
        - /local/alexandria-font.js    # loads the font created in step 5
    ```
    Restart HA after editing `configuration.yaml`.
-   Reload themes: Developer Tools → Actions → `frontend.reload_themes`.
+   Reload themes: **Tools** → Actions → `frontend.reload_themes`.
 7. Set the theme: Profile → Theme → select your theme name.
 8. **(Optional) Install Mushroom** via HACS → Frontend if you want Mushroom chip
    cards. After install, **restart HA** — the ZONE 6 Mushroom integration is not
@@ -356,7 +416,7 @@ the 5-view system has exactly one engagement type — this is why the system wor
 > Read `dashboard-system.md#full-dashboard-workflow` for the complete 6-step process (Collect → Classify → Present → Profile → Generate → Offer).
 
 Steps in brief:
-1. **Collect** — entity list (offer the Developer Tools snippet: `dashboard-system.md#entity-inventory`), primary device, fixed display?
+1. **Collect** — entity list (offer the Tools → Template snippet: `dashboard-system.md#entity-inventory`), primary device, fixed display?
 2. **Classify** — sort every entity into Bucket 0 (automate) / 1 (complications) / 2 (brief interaction) / 3 (deep engagement). Full bucket definitions: `dashboard-system.md#full-dashboard-workflow`. Apply the native-first check (`dashboard-system.md#native-first`) to Bucket 3 candidates.
 3. **Present** — show classification to user before writing any YAML. Never refuse based on it — user has final say.
 4. **Profile** — apply device-type profile (`dashboard-system.md#device-type-profiles`)
@@ -524,6 +584,10 @@ mitigation rather than generating a dashboard that will not work for them:
 - Native HA tile, heading and area cards *do* use accessible controls
   (`#native-interop`) — use them for anything that must be operable by
   keyboard or screen reader, and keep Bubble Card for the visual layer.
+  HA is actively investing here: 2026.7 added status indicators that don't
+  rely on colour alone, and 2026.9 made charts a real focus stop — arrow keys
+  walk the data points, a live region announces each value, and an audio tone
+  tracks the curve. A custom graph card has none of that.
 - Voice (Assist) is often the strongest path: it bypasses the UI entirely,
   which is why the `name:` alignment rule above matters more, not less.
 - Automate the interaction away where possible — the automate-first principle
@@ -828,32 +892,7 @@ views:
     path: home
     type: sections
     max_columns: 3          # 3 = works on tablet + desktop, wraps on mobile
-    cards:
-
-      # ── Pop-ups (always top-level, before sections) ──────
-      # REPLACE: update hash, name, icon, entity to match your rooms
-      - type: custom:bubble-card
-        card_type: pop-up
-        hash: '#living-room'         # REPLACE: '#your-room-name'
-        name: Living Room            # REPLACE: your room name
-        icon: mdi:sofa               # REPLACE: your room icon
-        width_desktop: "560px"
-        with_bottom_offset: true
-        cards:
-          # pop-up content cards here (see Recipe 1)
-
-      - type: custom:bubble-card
-        card_type: pop-up
-        hash: '#kitchen'             # REPLACE
-        name: Kitchen                # REPLACE
-        icon: mdi:chef-hat           # REPLACE
-        width_desktop: "560px"
-        with_bottom_offset: true
-        cards:
-          # pop-up content cards here
-
-      # ── Sections (the visible card grid) ─────────────────
-      sections:
+    sections:
 
         # Section 1 — full-width header row (chip bar)
         - type: grid
@@ -912,6 +951,31 @@ views:
               name: Climate
               card_layout: large
 
+    cards:
+
+      # ── Pop-ups (always top-level, before sections) ──────
+      # REPLACE: update hash, name, icon, entity to match your rooms
+      - type: custom:bubble-card
+        card_type: pop-up
+        hash: '#living-room'         # REPLACE: '#your-room-name'
+        name: Living Room            # REPLACE: your room name
+        icon: mdi:sofa               # REPLACE: your room icon
+        width_desktop: "560px"
+        with_bottom_offset: true
+        cards:
+          # pop-up content cards here (see Recipe 1)
+
+      - type: custom:bubble-card
+        card_type: pop-up
+        hash: '#kitchen'             # REPLACE
+        name: Kitchen                # REPLACE
+        icon: mdi:chef-hat           # REPLACE
+        width_desktop: "560px"
+        with_bottom_offset: true
+        cards:
+          # pop-up content cards here
+
+      # ── Sections (the visible card grid) ─────────────────
       # ── HBS Footer (always last card in view) ──────────────
       - type: custom:bubble-card
         card_type: horizontal-buttons-stack
@@ -1031,6 +1095,12 @@ That table covers the most frequent failure modes in one place.
 > "review my YAML", or similar.
 > **Do not trigger** for new dashboard generation — use §2#full-dashboard-workflow.
 
-Read `references/health-check-ref.md` in full before proceeding.
-Complete the structured parse (Step 1) before generating any findings.
+**Always read, in this order:** `health-check-ref.md#parse-steps` (all five
+steps, sequential, before writing any finding) → `#finding-types` (severity
+plus the native-feature advisories) → `#output-format`.
+
+**Read only when they apply:**
+- `#tone-guides` — a finding is automate-first or 5-view alignment related
+- `#partial-yaml` — the pasted YAML is clearly incomplete
+
 Deliver findings using the output format in that file — never free-form prose.

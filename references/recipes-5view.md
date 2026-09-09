@@ -326,80 +326,7 @@ Design rationale in `dashboard-system.md#view-rooms`.
 This recipe is the single source for the Rooms view YAML.
 
 ```yaml
-cards:
-
-  # ── Pop-ups — top-level, before sections ────────────────────────────────
-  # One pop-up per room. Use Recipe 1 (SKILL.md §7) for pop-up content.
-  # Use recipes-extended.md for bathroom, garage, security, vacuum rooms.
-
-  - type: custom:bubble-card
-    card_type: pop-up
-    hash: '#living-room'
-    name: Living Room
-    icon: mdi:sofa
-    entity: light.living_room_group             # REPLACE
-    width_desktop: "560px"
-    with_bottom_offset: true
-    cards:
-      # Lights
-      - type: custom:bubble-card
-        card_type: separator
-        name: Lights
-        icon: mdi:lightbulb
-
-      - type: custom:bubble-card
-        card_type: button
-        button_type: slider
-        entity: light.living_room_ceiling       # REPLACE
-        name: Ceiling
-        icon: mdi:ceiling-light
-        light_slider_type: brightness
-        card_layout: large
-
-      - type: custom:bubble-card
-        card_type: button
-        button_type: slider
-        entity: light.living_room_floor         # REPLACE
-        name: Floor Lamp
-        icon: mdi:floor-lamp
-        light_slider_type: brightness
-        card_layout: large
-
-      # Climate
-      - type: custom:bubble-card
-        card_type: separator
-        name: Climate
-        icon: mdi:thermometer
-
-      - type: custom:bubble-card
-        card_type: button
-        button_type: state
-        entity: climate.living_room             # REPLACE
-        name: Thermostat
-        icon: mdi:thermostat
-        show_state: true
-        card_layout: large
-        button_action:
-          tap_action:
-            action: more-info
-
-      # Media
-      - type: custom:bubble-card
-        card_type: separator
-        name: Media
-        icon: mdi:television
-
-      - type: custom:bubble-card
-        card_type: media-player
-        entity: media_player.living_room        # REPLACE
-        name: TV
-        card_layout: large
-        cover_background: true
-
-  # REPLACE: add one pop-up per additional room
-
-  # ── Sections ─────────────────────────────────────────────────────────────
-  sections:
+sections:
 
     # Active rooms chip bar
     - type: grid
@@ -528,6 +455,79 @@ cards:
               target:
                 entity_id: scene.good_night     # REPLACE
 
+cards:
+
+  # ── Pop-ups — top-level, before sections ────────────────────────────────
+  # One pop-up per room. Use Recipe 1 (SKILL.md §7) for pop-up content.
+  # Use recipes-extended.md for bathroom, garage, security, vacuum rooms.
+
+  - type: custom:bubble-card
+    card_type: pop-up
+    hash: '#living-room'
+    name: Living Room
+    icon: mdi:sofa
+    entity: light.living_room_group             # REPLACE
+    width_desktop: "560px"
+    with_bottom_offset: true
+    cards:
+      # Lights
+      - type: custom:bubble-card
+        card_type: separator
+        name: Lights
+        icon: mdi:lightbulb
+
+      - type: custom:bubble-card
+        card_type: button
+        button_type: slider
+        entity: light.living_room_ceiling       # REPLACE
+        name: Ceiling
+        icon: mdi:ceiling-light
+        light_slider_type: brightness
+        card_layout: large
+
+      - type: custom:bubble-card
+        card_type: button
+        button_type: slider
+        entity: light.living_room_floor         # REPLACE
+        name: Floor Lamp
+        icon: mdi:floor-lamp
+        light_slider_type: brightness
+        card_layout: large
+
+      # Climate
+      - type: custom:bubble-card
+        card_type: separator
+        name: Climate
+        icon: mdi:thermometer
+
+      - type: custom:bubble-card
+        card_type: button
+        button_type: state
+        entity: climate.living_room             # REPLACE
+        name: Thermostat
+        icon: mdi:thermostat
+        show_state: true
+        card_layout: large
+        button_action:
+          tap_action:
+            action: more-info
+
+      # Media
+      - type: custom:bubble-card
+        card_type: separator
+        name: Media
+        icon: mdi:television
+
+      - type: custom:bubble-card
+        card_type: media-player
+        entity: media_player.living_room        # REPLACE
+        name: TV
+        card_layout: large
+        cover_background: true
+
+  # REPLACE: add one pop-up per additional room
+
+  # ── Sections ─────────────────────────────────────────────────────────────
   # ── HBS footer ───────────────────────────────────────────────────────────
   - type: custom:bubble-card
     card_type: horizontal-buttons-stack
@@ -558,7 +558,8 @@ cards:
 
 ### Recipe 10 — Scenes view cards
 
-See `dashboard-system.md#view-scenes` for full scaffold.
+Design notes: `dashboard-system.md#view-scenes`. Full scaffold:
+`dashboard-system.md#view-scenes-scaffold`.
 Key patterns summarised here for quick reference.
 
 **Scene button pattern (copy for each scene):**
@@ -626,7 +627,8 @@ Key patterns summarised here for quick reference.
 
 ### Recipe 11 — Activity view cards
 
-See `dashboard-system.md#view-activity` for the complete scaffold with
+Design notes: `dashboard-system.md#view-activity`. Complete scaffold:
+`dashboard-system.md#view-activity-scaffold` — with
 all 8 category pairs. Key patterns summarised here.
 
 **Category pair pattern (copy for each of the 8 categories):**
@@ -780,8 +782,7 @@ sensor.*_power              ← optional: per-device power sensors
   max_columns: 2
   icon: mdi:lightning-bolt
   theme: Casa5HeyneV2                  # REPLACE
-  cards:
-    sections:
+  sections:
       - type: grid
         column_span: 2
         cards:
@@ -837,6 +838,7 @@ sensor.*_power              ← optional: per-device power sensors
             aggregate_func: max
             group_by: date
 
+  cards:
     - type: custom:bubble-card
       card_type: horizontal-buttons-stack
       auto_order: false
@@ -890,8 +892,7 @@ media_player.join / unjoin supported:
   max_columns: 1
   icon: mdi:music
   theme: Casa5HeyneV2                  # REPLACE
-  cards:
-    sections:
+  sections:
       - type: grid
         column_span: 1
         cards:
@@ -905,6 +906,7 @@ media_player.join / unjoin supported:
             min_volume: 0
             max_volume: 100
 
+  cards:
     - type: custom:bubble-card
       card_type: horizontal-buttons-stack
       auto_order: false

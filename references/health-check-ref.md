@@ -11,6 +11,11 @@ questions upfront. Note incomplete coverage at the end if the YAML appears parti
 
 ---
 
+## #parse-steps
+
+The five parse steps below are sequential and mandatory — complete all of them
+before writing a single finding.
+
 ### Step 1 — Complete the structured parse first
 
 **Before generating any findings**, fill in this parse template mentally.
@@ -281,6 +286,29 @@ controls (room buttons, switches) appear alongside history graphs or config card
 
 ---
 
+## #finding-types
+
+### Undeclared custom-card dependencies
+
+Flag as **Significant** when the audited YAML references a `custom:` element
+that is not part of this skill's declared stack (Bubble Card, Streamline,
+Sidebar, Mushroom, mini-graph-card, statistics-graph-chart-card). The dashboard works on the author's
+machine and breaks on anyone else's — including their own, after a HACS
+cleanup. List the elements found and note that each needs a HACS install.
+
+### Graph-density advisory
+
+Flag as **Advisory** when a view carries more than roughly three graph cards,
+or any graph sits on the Overview view. Graphs are deep-engagement content:
+they invite study, which is the opposite of what a glanceable surface is for.
+Suggest moving them behind a conditional (as the Activity view does) or
+pointing the user at the Advanced History panel
+(`graphs-ref.md#advanced-history`) instead of a graph wall.
+
+Also advisory: high-frequency sensors (power, price, network counters) graphed
+without `data_source: statistics` — a common cause of a slow dashboard
+(`graphs-ref.md#graph-performance`).
+
 ### Native-feature advisories
 
 Flag these as **Advisory only** — the custom construction works; native HA
@@ -341,6 +369,8 @@ Improvement opportunities — never prescriptive.
 | 5-view alignment opportunity | Optional restructure |
 
 ---
+
+## #output-format
 
 ### Output format
 
@@ -405,6 +435,11 @@ including all views and the HBS footer card."]
 
 ---
 
+## #tone-guides
+
+Read when a finding falls into one of these two categories. Not needed for a
+purely structural audit.
+
 ### Automate-first findings — tone guide
 
 When flagging an interactive card on an automation-territory entity, always:
@@ -451,6 +486,8 @@ Suggestion:
 ```
 
 ---
+
+## #partial-yaml
 
 ### Partial YAML handling
 

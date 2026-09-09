@@ -63,6 +63,8 @@ that says a motion-triggered light does not need a card.
 | Weather forecast pop-up or graph | Weather tile forecast features (HA 2026.6+) |
 | Full media transport controls | Media player tile features (HA 2026.5/2026.6+) |
 | Generic "everything" dashboard | Native Home dashboard — may be enough |
+| Combined battery state of charge for a storage system | Energy dashboard's combined battery level, capacity-weighted (HA 2026.8+) |
+| A clock card with the date under the time | Native clock card — it does dates now (HA 2026.8+) |
 
 **Tone:** always Advisory. Present the native option, state the trade-off,
 and let the user decide. Never refuse to build the custom version.
@@ -338,11 +340,39 @@ Offer two things, briefly:
 
 ---
 
+## #entity-rename-risk
+
+### Entity IDs can now be renamed from the UI — plan for it
+
+Since HA 2026.8, renaming an entity ID is a two-click operation in the entity
+settings, and HA nudges people toward tidy, consistent naming. Dashboards are
+the most fragile consumer of entity IDs: nothing validates them, and a card
+pointing at a renamed entity simply shows *Entity not available* — silently,
+and often only on one view the user rarely opens.
+
+**When a user mentions renaming entities, or asks for help tidying entity IDs:**
+
+- Say plainly that dashboard YAML does not follow renames. HA's repair flow
+  covers automations and scripts far better than it covers Lovelace.
+- Recommend the order: rename first, then fix the dashboard — and offer the
+  health check (§9) against the pasted YAML afterwards to find the orphans.
+- For a Streamline-templated dashboard, entity IDs usually sit in the template
+  *arguments*, so the damage is concentrated and easy to repair — one more
+  argument for templating repeated structures.
+- `sensor.` entities feeding a graph or a template sensor are the ones people
+  forget; the card breaks quietly rather than visibly.
+
+Renaming is not a bad idea — consistent IDs make everything downstream easier.
+The point is to sequence it, not to discourage it.
+
+---
+
 ## #entity-inventory
 
 ### Entity inventory snippet — the Collect step, made easy
 
-Paste this into **Developer Tools → Template**, then copy the output back
+Paste this into **Tools → Template** (named *Developer Tools* before HA
+2026.8), then copy the output back
 into the conversation. It is a one-off evaluation — nothing is created or
 saved in HA.
 
@@ -721,14 +751,24 @@ reconstruct it from this section.
 [HBS footer]
 ```
 
+**Copy-paste YAML:** `#view-scenes-scaffold` — the complete Scenes view scaffold is
+a separate anchor so the design notes above can be read without loading it.
+
+---
+
+## #view-scenes-scaffold
+
+### Scenes view — complete scaffold
+
+Design rationale and helper requirements: `#view-scenes`.
+
 **Complete Scenes view scaffold:**
 ```yaml
 - title: Scenes
   path: scenes
   type: sections
   max_columns: 3
-  cards:
-    sections:
+  sections:
 
       # Active scene chip
       - type: grid
@@ -960,6 +1000,7 @@ reconstruct it from this section.
                   show_icon: false
                   show_background: false
 
+  cards:
     # HBS footer
     - type: custom:bubble-card
       card_type: horizontal-buttons-stack
@@ -1070,14 +1111,33 @@ input_boolean:
           legend: true
 ```
 
+**Copy-paste YAML:** `#view-activity-scaffold` — the complete Activity view scaffold is
+a separate anchor so the design notes above can be read without loading it.
+
+---
+
+## #view-activity-scaffold
+
+### Activity view — complete scaffold
+
+Design rationale and helper requirements: `#view-activity`.
+
+> **Graph card choice — ask, don't assume.** This scaffold is written with
+> `custom:mini-graph-card`, but that is a placeholder, not a recommendation.
+> Ask what the user already has installed and substitute per
+> `graphs-ref.md#graph-decision`: the native `history-graph` needs no
+> dependency at all, and if SGCC is already in the setup, use it in
+> `sparkline: true` mode rather than adding a second graph dependency. Whatever is chosen, the graphs stay hidden
+> behind the conditional until the event card is tapped: this view is
+> deep-engagement content, not a wall of charts.
+
 **Complete Activity view scaffold:**
 ```yaml
 - title: Activity
   path: activity
   type: sections
   max_columns: 2
-  cards:
-    sections:
+  sections:
 
       # ── Home Activity ──────────────────────────────────────
 
@@ -1368,6 +1428,7 @@ input_boolean:
               line_width: 2
               fill: false
 
+  cards:
     # HBS footer
     - type: custom:bubble-card
       card_type: horizontal-buttons-stack
@@ -1416,8 +1477,7 @@ Settings / Maintenance = what needs action now (below threshold, overdue, offlin
   path: settings
   type: sections
   max_columns: 3
-  cards:
-    sections:
+  sections:
 
       # Automation overrides
       - type: grid
@@ -1626,6 +1686,7 @@ Settings / Maintenance = what needs action now (below threshold, overdue, offlin
                 action: navigate
                 navigation_path: /config/integrations
 
+  cards:
     # HBS footer
     - type: custom:bubble-card
       card_type: horizontal-buttons-stack
@@ -1653,8 +1714,7 @@ If using the HA Energy integration, these are available automatically.
   path: energy
   type: sections
   max_columns: 2
-  cards:
-    sections:
+  sections:
 
       # Summary chip bar
       - type: grid
@@ -1791,6 +1851,7 @@ If using the HA Energy integration, these are available automatically.
             aggregate_func: max
             group_by: date
 
+  cards:
     # HBS footer
     - type: custom:bubble-card
       card_type: horizontal-buttons-stack
@@ -1817,42 +1878,7 @@ Check platform documentation before generating group control cards.
   path: music
   type: sections
   max_columns: 2
-  cards:
-
-    # ── Zone pop-ups — top-level ─────────────────────────────
-    - type: custom:bubble-card
-      card_type: pop-up
-      hash: '#zone-living-room'
-      name: Living Room
-      icon: mdi:sofa
-      width_desktop: "560px"
-      with_bottom_offset: true
-      cards:
-        - type: custom:bubble-card
-          card_type: separator
-          name: Living Room Audio
-          icon: mdi:speaker
-
-        - type: custom:bubble-card
-          card_type: media-player
-          entity: media_player.living_room      # REPLACE
-          name: Living Room
-          card_layout: large
-          cover_background: true
-          show_state: true
-          min_volume: 0
-          max_volume: 100
-          sub_button:
-            main:
-              - name: Source
-                select_attribute: source
-                show_arrow: true
-                show_state: true
-                show_background: false
-
-    # REPLACE: add one pop-up per zone
-
-    sections:
+  sections:
 
       # Now playing — master card
       - type: grid
@@ -1939,6 +1965,41 @@ Check platform documentation before generating group control cards.
                     - media_player.living_room    # REPLACE — list all zones
                     - media_player.kitchen
                     - media_player.bedroom
+
+  cards:
+
+    # ── Zone pop-ups — top-level ─────────────────────────────
+    - type: custom:bubble-card
+      card_type: pop-up
+      hash: '#zone-living-room'
+      name: Living Room
+      icon: mdi:sofa
+      width_desktop: "560px"
+      with_bottom_offset: true
+      cards:
+        - type: custom:bubble-card
+          card_type: separator
+          name: Living Room Audio
+          icon: mdi:speaker
+
+        - type: custom:bubble-card
+          card_type: media-player
+          entity: media_player.living_room      # REPLACE
+          name: Living Room
+          card_layout: large
+          cover_background: true
+          show_state: true
+          min_volume: 0
+          max_volume: 100
+          sub_button:
+            main:
+              - name: Source
+                select_attribute: source
+                show_arrow: true
+                show_state: true
+                show_background: false
+
+    # REPLACE: add one pop-up per zone
 
     # HBS footer
     - type: custom:bubble-card

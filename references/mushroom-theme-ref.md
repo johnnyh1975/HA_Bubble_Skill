@@ -144,7 +144,7 @@ mush-rgb-state-cover-closed: "var(--mush-rgb-disabled)"  # closed → grey
 ```yaml
 mush-rgb-state-alarm-disarmed: "var(--mush-rgb-info)"    # disarmed → blue
 mush-rgb-state-alarm-armed:    "var(--mush-rgb-success)" # armed → green
-mush-rgb-state-alarm-triggered:"var(--mush-rgb-danger)"  # triggered → red
+mush-rgb-state-alarm-triggered: "var(--mush-rgb-danger)" # triggered → red
 ```
 
 **Lock states (3 sub-states):**

@@ -488,8 +488,7 @@ light_with_battery:
     sub_button:
       main:
         - entity: '[[battery_sensor]]'
-          show_attribute: true
-          attribute: battery_level
+          show_state: true
           show_icon: true
           icon: mdi:battery
           show_background: false

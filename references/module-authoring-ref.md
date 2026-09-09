@@ -398,6 +398,122 @@ Still supported, but prefer selector-based fields above for a richer UI:
 
 ---
 
+## #module-performance
+
+### Making a module cheap enough for a dashboard
+
+Module `code:` runs on **every style pass of every card carrying the module**,
+and a pop-up rebuilds all of its cards each time it opens — roughly seven
+passes per card per open. A module that is cheap on one card is therefore not
+automatically cheap on a dashboard. Bubble Card's own documentation reports one
+real module going from 7.2 s to 3.7 s cold pop-up open on a low-end iPad, and
+30.7 ms to 6.8 ms per template execution, purely from the two habits below.
+
+**`hasChanged(label, ...values)` — do the work only when something moved.**
+Returns `true` the first time and whenever a value has changed, `false` in
+between.
+
+```yaml
+code: |
+  ${(() => {
+    const rgb = hass.states[entity]?.attributes?.rgb_color;
+    if (typeof hasChanged === 'function' && !hasChanged('tint', state, rgb)) return;
+    card.style.setProperty('--my-tint', computeTint(state, rgb));
+  })()}
+```
+
+- One memory per label per card — several independent gates per module are
+  fine, and two modules using the same label never collide.
+- Arrays compare by value, so an RGB triplet works directly.
+- Never throws; returns `true` rather than skipping work if it cannot remember.
+- Pass *everything* the work depends on, including values read from the DOM or
+  theme — what is not in the list cannot be noticed.
+- Gate only your own writes. If something outside the module can remove what
+  you wrote, the gate will not know to write it again.
+
+**`onTeardown(fn)` — release what the module started.** Timers, observers and
+listeners on shared targets outlive the card that created them. A guard like
+`if (!this._timer)` does not help, because a rebuilt card starts from a fresh
+element.
+
+```yaml
+code: |
+  ${(() => {
+    if (!this._myTimer) {
+      this._myTimer = setInterval(() => { /* ... */ }, 5000);
+      if (typeof onTeardown === 'function') {
+        onTeardown(() => { clearInterval(this._myTimer); this._myTimer = null; });
+      }
+    }
+  })()}
+```
+
+One registration per module per card (re-registering replaces rather than
+stacks), the last registration wins and runs exactly once, and one module's
+throwing teardown cannot stop the others. A card HA merely *moved* in the DOM
+is also torn down — intentional, since the next style pass registers again.
+
+### Version compatibility inside `code:`
+
+**Referencing a name the installed version does not provide throws, and Bubble
+Card then skips the entire module** — the card loses all of that module's
+styling, not just the one feature. `typeof` is the only safe test.
+
+| Helper | Available since |
+|--------|-----------------|
+| `onTeardown` | 3.3.0 |
+| `hasChanged` | 3.3.0 |
+
+YAML *keys* are safe — an older version ignores a key it does not know, such as
+`suggestions:`. Only names used inside `code:` need the `typeof` guard. When
+writing a fallback, make it do the *same* thing, otherwise you maintain two
+behaviours and test one.
+
+---
+
+## #module-suggestions
+
+### Joining the HA card picker (v3.3.0+)
+
+Since HA 2026.6 the card picker suggests cards when a user selects an entity.
+A module can add its own entries with a `suggestions:` key; they appear in the
+picker's **Community** section as live previews.
+
+```yaml
+my_module:
+  name: My Module
+  version: "1.0"
+  supported: [button]
+  suggestions:
+    - extends: native            # clone every built-in tile suggestion, module applied
+    - label: Weather + forecast  # or a standalone, fully authored entry
+      domains: [weather]
+      config:
+        card_type: button
+        button_type: state
+        entity: ${entity}
+```
+
+| Option | Description |
+|--------|-------------|
+| `extends` | `native` clones every built-in tile suggestion for the picked entity and adds the module; `base` clones only the first tile — the right pick when the module offers one entry per layout |
+| `config` | Standalone card config, or the patch merged over each clone. `${entity}` is replaced by the picked entity id |
+| `domains` | Restrict to given entity domains |
+| `condition` | JS expression with `hass`, `entity`, `state`, `attributes`, `stateObj`, `domain` in scope; falsy or throwing skips the suggestion |
+| `label` | Variant text shown after the module name |
+
+For configurations that must be *computed* rather than described in advance,
+use `suggestions_code:` instead; both keys can coexist on one module.
+
+Good to know: `supported:` is honoured, so clones for unsupported card types
+are dropped. Each module is capped at 24 suggestions per entity, with no global
+cap — every installed module keeps its share of the picker. A rule that throws
+is ignored and logged once, never breaking the picker. On a fresh browser
+profile only built-in suggestions appear until a dashboard has rendered once,
+because the picker asks synchronously.
+
+---
+
 ## #best-practices
 
 1. Only expose fields the user actually needs to configure — every extra

@@ -2,7 +2,7 @@
 # ha-bubble-dashboard skill — Phase 3
 # Covers: all card types, CSS variables, JS template API,
 #         module workflow, version compatibility.
-# Source: Bubble Card v3.2.5 source tree (src/) + release notes v3.0–v3.2.5
+# Source: Bubble Card v3.3.0 source tree (src/) + release notes v3.0–v3.3.0
 
 ---
 
@@ -19,6 +19,7 @@
 | v3.2.3 | Smart entity/card suggestions in the editor (HA 2026.6 integration, editor UX only). `close_action` now fires only on manual pop-up close, not during navigation between pop-ups — fixes nested pop-up navigation. Fixed pop-up header background-color leaking onto child cards. Fixed pop-ups staying visible on iOS due to an HA 2026.5.x sections-layout DOM change. | No YAML changes. If troubleshooting nested-pop-up navigation, confirm the user is on v3.2.3+. |
 | v3.2.4 | **Standalone pop-ups nested inside `vertical-stack` / `vertical-stack-in-card` now work correctly** (create, edit, remove, duplicate, move) — this pattern was broken/unreliable in v3.2.0–v3.2.3. Editor now shows an explicit "Nested pop-ups are not supported" warning card if a pop-up is placed inside another pop-up's own `cards:` block (this was always unsupported, just silent before). Improved module-editor object selector for module developers (groups, conditionals, variants — editor UI only, not YAML-facing). Various perf/cleanup fixes for pop-up DOM lifecycle. | If a recipe wraps a Bubble pop-up inside `vertical-stack`/`vertical-stack-in-card`, note it requires v3.2.4+. Never generate a pop-up nested inside another pop-up's `cards:` — this remains unsupported at every version. |
 | v3.2.5 | **Cover tilt support** — new `tilt_buttons` (position or `hidden`), `open_tilt_service`, `close_tilt_service` on the cover card, `cover_slider_type: tilt_position` on cover sliders and slider sub-buttons. Editor shows the tilt panel only when the entity reports `OPEN_TILT`/`CLOSE_TILT`/`SET_TILT_POSITION`. Pop-ups inside `grid`/masonry layout boundaries no longer hide the shared `hui-card`; improved pop-up shell detach on leaving editor mode. | Purely additive. Tilt YAML requires v3.2.5+ — on older versions the options are ignored. |
+| v3.3.0 | **Platform conditions** — HA's own `domain.name` conditions (`sun.is_up`, `motion.is_detected`, `climate.is_heating`… 141 total) now evaluate client-side in `visibility:`. **`grid_options`** supported for native sections sizing. **Editor translations moved** — the `translations/` folder is gone; dictionaries now sit beside `bubble-card.js` as `bubble-card-<lang>.json`. Dropdown component rewritten with HA 2026.3+ frontend detection (`ha-picker-field`). Legacy `style_templates:` auto-migrates to `modules:`. | Additive for YAML. **Manual installs must delete the old `translations/` folder** and copy the new JSON files; HACS handles it automatically. Platform conditions require v3.3.0+ — on older versions they silently degrade to a state check. |
 
 **Always generate v3.2+ formats.** Never generate the pre-v3.2 pop-up pattern (separate stack + pop-up card at the top of a view). Never reference `bubble-pop-up-fix.js`. Never nest a `card_type: pop-up` inside another pop-up's `cards:` block — always unsupported, and v3.2.4+ surfaces an explicit editor warning for it.
 
@@ -319,6 +320,7 @@ card_layout: large
 | `button_action` | object | — | `tap_action`, `double_tap_action`, `hold_action` on the card body |
 | `show_last_updated` | boolean | false | Show last updated time (counterpart to `show_last_changed`) |
 | `sub_button_justify_content` | string | — | Alignment of the sub-button row: any CSS `justify-content` value (`flex-start`, `center`, `space-between`…) |
+| `grid_options` | object | — | Native HA sections sizing: `{rows, columns}`. Set by the HA card-resize UI; prefer it over `rows:` when the card sits in a sections view (v3.3.0+). |
 
 **Slider-specific options:**
 
@@ -402,7 +404,7 @@ cards — one per dimension. Use `light_slider_type` to target each attribute.
 hue/saturation sliders for lights that are genuinely used for colour — adding
 them to a tunable-white-only light (which doesn't support hue) has no effect.
 
-**Check `supported_color_modes`** on the entity in Developer Tools → States
+**Check `supported_color_modes`** on the entity in **Tools** → States
 before generating colour sliders. If the list contains only `color_temp`, skip
 hue and saturation.
 
@@ -435,6 +437,42 @@ visibility:
 | `user` | Show only for specific HA users |
 | `and` | All conditions must pass |
 | `or` | Any condition must pass |
+| `not` | Inverts the nested conditions |
+| `time` | Time-of-day / weekday windows |
+| `location` | Person or device_tracker in a zone |
+| `template` | Jinja2 template evaluating truthy |
+| `view_columns` | Show depending on the view's column count |
+
+**Platform conditions (v3.3.0+).** Bubble Card now also evaluates Home
+Assistant's own `domain.name` conditions client-side — the ones the native
+condition builder offers, such as `sun.is_up`, `motion.is_detected`,
+`climate.is_heating`, `lock.is_unlocked`, `zone.in_zone`,
+`select.is_option_selected`. 141 of them are supported.
+
+```yaml
+# v3.3.0+ — a platform condition, not a Lovelace one
+visibility:
+  - condition: sun.is_up
+    entity_id: sun.sun
+```
+
+Prefer them where they express the intent more directly than a `state`
+comparison: `condition: climate.is_heating` is clearer and more robust than
+matching `hvac_action` against a string.
+
+**Caveats — these are client-side ports, not the server evaluating them:**
+- Anything requiring astral maths is approximated. Sun elevation bands are
+  read from `sun.sun` rather than computed.
+- `for:` durations are derived from `last_changed`/`last_updated` without the
+  recorder's priming pass, so a condition that was already true before the
+  last state change can read as shorter than HA would report.
+- Recorder-history-based conditions cannot be ported at all.
+- Unsupported condition types fall back to being treated as a `state`
+  condition and log a console warning — they do not fail loudly.
+
+On Bubble Card < 3.3.0 a platform condition is an unknown type: it degrades to
+a state check and will not behave as intended. Only generate these when the
+user is on v3.3.0+.
 
 **Use case patterns:**
 ```yaml
@@ -468,9 +506,8 @@ Sub-buttons have two positions: `main` (right side of card) and `bottom`
 ```yaml
 sub_button:
   main:
-    - entity: sensor.battery_level
-      show_attribute: true
-      attribute: battery_level
+    - entity: sensor.device_battery       # a battery SENSOR, not an attribute
+      show_state: true
       show_icon: true
       icon: mdi:battery
       show_background: false
@@ -736,6 +773,18 @@ sub_button:
         navigation_path: '#lights'
 ```
 
+**Per-sub-button options beyond the common set:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `sub_button_type` | `default` | `default` / `slider` / `dropdown` |
+| `content_layout` | `icon-left` | Icon/label arrangement inside the button |
+| `always_visible` | false | Keep a slider sub-button expanded rather than tap-to-open |
+| `show_button_info` | false | Show the value alongside a slider. Forces `slider_value_position: right`. |
+| `hide_when_parent_unavailable` | false | Hide this sub-button when the card's main entity is unavailable |
+| `light_background` | true | Tint the background from the light's colour |
+| `css_class` | — | Adds a custom class to the element, for targeting from `styles:` or a module. Prefer this over brittle `nth-child` selectors. |
+
 **Layout options for the sub-buttons card:**
 
 | Option | Default | Description |
@@ -827,6 +876,14 @@ styles: |
 ## #js-templates
 
 ### JavaScript template API
+
+> **Performance context (HA 2026.8+).** HA's own Jinja2 templates got up to
+> 40% faster for numeric results, and templates used on dashboards are now
+> cached. That narrows the historic gap between a template sensor and a
+> dashboard-side template. It does not change this skill's scope rule —
+> template *sensors* are still an ha-yaml handoff — but it does mean a
+> template sensor is no longer automatically the faster choice, so don't
+> justify one on performance grounds alone.
 
 JS templates go in the `styles:` key. CSS property assignments run first;
 DOM-modifying statements must come last.

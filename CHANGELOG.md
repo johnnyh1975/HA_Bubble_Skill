@@ -23,266 +23,386 @@ actual `var()` fallback chain in source rather than trusting documentation.
 
 ---
 
-## v1.4 — 2026-08-06
+## v1.6 — 2026-08-29
 
-### Bubble Card version compatibility — v3.2.2 → v3.2.4
+New capability: graph and history coverage. Adds support for two components
+the skill did not previously know about, and closes a dependency the skill had
+been generating without ever declaring.
 
-Skill was pinned to Bubble Card v3.2.2; updated against actual v3.2.4 source
-(confirmed via `src/var/version.js` and official GitHub release notes for
-v3.2.3 and v3.2.4).
+### New reference: `graphs-ref.md`
 
-**`bubble-card-ref.md`:**
-- `#version-compat` table: added v3.2.3 row (smart entity/card suggestions,
-  `close_action` fix for nested pop-up navigation, pop-up header colour-leak
-  fix, iOS pop-up-visibility fix) and v3.2.4 row (standalone pop-ups now work
-  reliably inside `vertical-stack`/`vertical-stack-in-card`; explicit editor
-  warning for true pop-up-in-pop-up nesting; module-editor object-selector
-  improvements for module developers — editor-only, not YAML-facing).
-- Source header updated from v3.2.2 to v3.2.4.
-- Added explicit rule: never nest a `card_type: pop-up` inside another
-  pop-up's `cards:` block — unsupported at every version.
+The skill generated `custom:mini-graph-card` in 15 places without ever
+declaring it as a dependency, and had no guidance on choosing a graph card at
+all. New reference file, deliberately scoped rather than exhaustive:
 
-**`troubleshooting-ref.md`:**
-- New `#nested-popup-warning` section distinguishing two symptoms that look
-  similar but aren't: (1) true pop-up-in-pop-up nesting, always unsupported,
-  fix is to use hash navigation instead; (2) pop-up nested inside a
-  `vertical-stack`/`vertical-stack-in-card`, which was unreliable pre-v3.2.4
-  and just needs an update.
-- `#version-migration` table: added v3.2.4 row for the `vertical-stack-in-card`
-  fix.
+- **`#graph-decision`** — the decision table (native `history-graph` /
+  `statistics-graph` → mini-graph-card → SGCC → Advanced History panel), with
+  the rule that every custom option is a HACS install that must be named
+  alongside its native fallback.
+- **`#sgcc-status`** — Statistics Graph Chart Card ships as a **minified,
+  protected bundle**, so source-first verification (this skill's standing
+  method) is impossible for it. Documented from README only, stated plainly,
+  with the maintenance consequences for unattended wall panels.
+- **`#sgcc-dashboard-use`** — the handful of options that matter for
+  generation rather than the full 4700-line surface: `sparkline` (chrome-free,
+  the calm-tech-compatible form), `height: auto` (participates in sections
+  grid sizing), `group_by: raw` for step charts, plus the Iron Law reminder
+  that `color:` takes CSS values, so theme variables belong there.
+- **`#graph-performance`** — `data_source: statistics` and statistics-based
+  `group_by` as the mechanisms that keep a graph-heavy dashboard off the
+  database's back; upstream measures 287 rows/33 ms vs 21,995 rows/1.7 s for
+  the same window. Plus the `state_class` prerequisite for long ranges, which
+  is an ha-yaml handoff rather than a card option.
+- **`#advanced-history`** — the panel (integration v2.0.1, requires SGCC
+  v3.32+, v4.02+ for multiple panels). Positioned through the engagement-type
+  model: it is not a card, so it never competes for dashboard space, which
+  makes it the honest answer to "a page with graphs of everything" — an
+  exploration tool rather than a glanceable surface.
 
-**`SKILL.md`:**
-- Added `#nested-popup-warning` to both the troubleshooting quick-route table
-  and the compact anchor list.
+- **The mini-graph-card / SGCC-sparkline overlap** is addressed explicitly
+  rather than left for the reader. Both cover "a small trend line", so the
+  choice is a dependency decision: use whichever is already installed; never
+  add mini-graph-card when SGCC is going in anyway (sparkline covers it);
+  prefer the small open card when a sparkline is the only need; and don't let
+  the whole graph capability rest on an unauditable bundle by default. The
+  Activity scaffold now labels its `mini-graph-card` usage as a *placeholder*
+  with an instruction to ask, not a recommendation.
+- SGCC's install path is documented honestly: the README's steps imply the
+  default HACS catalogue while the repository still carries a *HACS: Custom*
+  badge, so the guidance covers both.
 
-**Verification performed:** full scan of all card `editor.js` schema files in
-actual (non-minified) v3.2.4 source against `bubble-card-ref.md` — no
-undocumented YAML-facing options found; all previously-documented options
-(`footer_mode`, `highlight_current_view`, `auto_order`, `close_by_clicking_outside`,
-etc.) confirmed accurate against source. No new card types, no new visibility
-condition types.
+Wired in: prerequisites table, process-tree route, two Signal Scan rows, the
+Activity scaffold, four troubleshooting entries, a health-check graph-density
+advisory, and `#eval-12-graph-request`.
 
-**Considered and deferred:** a dedicated Bubble Card module-authoring skill —
-decided against as a separate skill; added as a reference file instead (below).
+### CI pipeline
 
-### Module authoring — correctness fix + new reference file
+- **`verify.yml`** — runs `verify.py` on every push and pull request, plus an
+  advisory external-link check (non-blocking: upstream repos rename, and a
+  redirect on someone else's URL should not fail a docs change).
+- **`upstream-drift.yml`** — weekly job comparing the component pins in
+  SKILL.md against the latest upstream releases via the GitHub API, opening or
+  updating a single issue when a pin falls behind. This automates the failure
+  mode that has actually recurred here: guidance going stale because a release
+  shipped unnoticed. The issue body repeats the standing rule — scan the
+  source tree, not the release notes.
+- **`release.yml`** — on a `v*` tag: verify, assert the tag matches the
+  `version` in SKILL.md metadata, build both a `.zip` and a `.skill` bundle,
+  re-run `verify.py` against the *packaged* copy, and publish a GitHub
+  Release. The repo previously had no tags and no releases; every version was
+  a hand-passed zip.
+- **`check_upstream.py`** — the drift checker, also usable locally.
+- **`test_verify.py`** — negative tests for `verify.py`, run in CI. A checker
+  that only ever passes proves nothing; this injects each bug class into a
+  throwaway copy of the library and asserts the checker still catches it. Ten
+  cases, one per shipped bug class, currently 10/10. This closes a real gap:
+  `verify.py` missed the stale frontmatter comment because nothing tested the
+  tester.
 
-**Fixed factual errors in `bubble-card-ref.md#module-authoring`,** found by
-diffing the section against the actual (non-minified) v3.2.4 module-system
-source (`modules/parser.js`, `modules/utils.js`, `modules/export.js`):
-- Removed a `variables:` key + `{{mustache}}` interpolation pattern that does
-  not exist anywhere in Bubble Card's module system. The real mechanism is an
-  `editor:` key (HA form-selector schema array) read back via
-  `this.config.<module_id>?.<field_name>` inside the `code:` JS template —
-  same access pattern as a card's `styles:` key.
-- Removed `supported: [all]` — `'all'` is not a recognised literal anywhere in
-  `getAvailableCardTypes()`. Applying a module to every card type means
-  omitting `supported:` entirely.
-- Section shortened to a quick-start (structure + corrected examples) and now
-  points to the new `module-authoring-ref.md` for the full field catalog.
+### Fenced YAML validation — and the defect it found
 
-**New `references/module-authoring-ref.md`** — built from Bubble Card's own
-bundled `src/modules/editor-schema-docs.md` (introduced alongside the v3.2.4
-object-selector PR #2489), restructured and condensed rather than reprinted
-verbatim:
-- Full `editor:` field-type catalog (selector-based fields grouped as basic
-  input / HA references / date-time / advanced, plus legacy type-based fields)
-- Object selector in full, including the v3.2.4 additions: `group`/`group_icon`,
-  `visible_if`/`warn_if`/`warn_text` (conditional fields), `variant_of`/`variant`
-  (mutually-exclusive alternatives collapsed into one dropdown), `cluster_of`
-  (visual-only grouping of independent fields)
-- Grid and expandable-section layout
-- A complete worked module example
-- Module distribution/sharing formats (`#sharing-a-module`), sourced from
-  `modules/export.js`'s `generateYamlExport`/`generateGitHubExport` — the
-  plain-YAML download format and the exact GitHub Discussion markdown format
-  the Module Store expects, with the quirks preserved (only the first
-  `editor:` field appears in the inline example; `supported:` omitted when
-  all cards apply; placeholder discussion link)
+`verify.py` validated the two standalone `.yaml` files but never the ~205
+fenced YAML blocks in the documentation, which *are* the product: users copy
+them into Home Assistant. Parsing them found a defect in seven scaffolds,
+including the core dashboard example in SKILL.md itself.
 
-**Routing:** added to `SKILL.md`'s top-level decision tree and both reference
-indexes. `bubble-card-ref.md#module-authoring` is read first for the module's
-top-level structure; `module-authoring-ref.md` is only pulled in for the
-`editor:` schema or the sharing/export format — keeping it out of context for
-ordinary dashboard-generation requests, per the on-demand loading pattern from
-v1.2→v1.3.
+**The bug:** view scaffolds nested `sections:` underneath `cards:`
 
-### Redundancy pass — `#modules` vs `#module-authoring`
+```yaml
+  cards:            # wrong
+    sections:
+```
 
-Split ownership so each syntax pattern lives in exactly one place:
-- `#modules` now owns *applying/excluding* a module (`modules:` key,
-  `'!module_id'` exclusion) — trimmed its duplicate module-YAML-structure
-  example, added a pointer to `#module-authoring` for writing one.
-- `#module-authoring` now owns *writing* a module — dropped its duplicate
-  "applying a module to a card" example, replaced with a one-line pointer
-  back to `#modules`.
-- Net: both sections shorter, no content lost, no pattern duplicated.
+instead of making them siblings. In a sections view, `sections:` holds the
+card grid and `cards:` holds top-level cards (pop-ups, the HBS footer) — the
+skill's own §4 rule. The nested form does not parse, so anyone copying an
+affected scaffold got a dashboard that would not load. Affected: the SKILL.md
+core example, four scaffolds in `dashboard-system.md` (Scenes, Activity,
+Settings, Energy), the Music scaffold (which also needed reordering, as its
+pop-ups preceded the sections), and two in `recipes-5view.md`.
 
-**`bubble_card_tools` version confirmed still current at `1.0.2`.**
+Also fixed: `mush-rgb-state-alarm-triggered:"var(…)"` in
+`mushroom-theme-ref.md` was missing the space after the colon, so that line
+silently did nothing when copied into a theme.
+
+**New check (`yaml-examples`)** parses every fenced block, skipping the ones
+that legitimately are not plain YAML — HA `!include*` tags, `{placeholder}`
+keys, Streamline `[[variable]]` templates, and deliberately-partial
+WRONG/CORRECT teaching fragments. `verify.py` is now 12 checks.
+
+This is the clearest argument yet for the CI work: the defect had shipped, was
+invisible to every existing check, and sat in the most-copied example in the
+library.
+
+### Token budget monitoring
+
+- **`token_budget.py`** — measures the footprint that actually matters:
+  SKILL.md as the fixed per-session cost, versus the anchor-routed reference
+  library that only costs what is read. Enforces a ceiling on SKILL.md and a
+  per-anchor ceiling above which routing stops helping, and reports growth
+  over a committed baseline (`token-baseline.json`).
+- Wired into `verify.yml`; on pull requests a sticky comment reports the
+  SKILL.md delta, so a change that adds to the every-session cost says so in
+  review instead of surfacing months later.
+- Motivating measurement: SKILL.md grew from 14,959 to 15,928 tokens (+6.5%)
+  during this release's work without anyone noticing. It sits at 15,928/17,000
+  now — comfortable, but the trend is the point. Largest anchor is
+  `#view-activity-scaffold` at 3,483; median across 162 anchors is 516.
+- `test_verify.py` gained a case for the budget guard: 11/11.
+
+### Repository layout
+
+Repository tooling moved from the skill root into `scripts/`
+(`verify.py`, `test_verify.py`, `token_budget.py`, `check_upstream.py`,
+`token-baseline.json`). The repo *is* the skill, so anything at the top level
+ends up in what users install — the release bundle was shipping a test
+harness, a token estimator and a drift checker to people who only wanted the
+dashboard guidance.
+
+`release.yml` now excludes `scripts/`, `CHANGELOG-v*-detail.md` and
+`RELEASE_NOTES_v*.md` from the bundle, and verifies the packaged tree by
+copying the checker in temporarily rather than shipping it. Every tool
+resolves the skill root as its parent directory, so all paths still work.
+
+### CI hardening
+
+- Least-privilege `permissions:` on all three workflows (`contents: read`
+  except where a job must write), `concurrency` groups (cancel superseded PR
+  runs; never cancel a half-published release), `timeout-minutes`, and a
+  pinned PyYAML version.
+- **Release body defect fixed before it shipped:** `body_path: CHANGELOG.md`
+  would have pasted all 480+ lines of history into every GitHub Release. The
+  workflow now extracts only the tagged version's section (104 lines for
+  v1.6) and fails the release if no such section exists.
+- `.github/dependabot.yml` — monthly updates for third-party actions, the main
+  supply-chain surface. Note in the file: pin to commit SHAs for the stricter
+  guarantee; Dependabot maintains SHA pins too.
+- PR template with the project's actual invariants as a checklist (source-tree
+  scanning, routing reachability, the Iron Law, version gating), and two issue
+  templates — "Claude generated something wrong" and "a component released",
+  the two report types this repo actually receives.
+
+### Adopted from skill-creator
+
+Anthropic's `skill-creator` bundles `quick_validate.py`, which enforces the
+SKILL.md frontmatter spec. Rather than vendor Apache-licensed code into an MIT
+repo, the same rules were reimplemented as a `verify.py` check: exactly one
+SKILL.md, `name`/`description` required, kebab-case name within 64 chars,
+description within 1024 chars and free of angle brackets. The skill passes the
+official validator unchanged.
+
+Added on top: a warning above 900 description characters. The current
+description is 877/1024 — every new TRIGGER or SYMPTOM line eats headroom, and
+hitting the limit mid-edit is a bad time to find out.
+
+`verify.py` is now 11 checks; workflow YAML joined the validity pass.
+
+### Fixes
+
+- Frontmatter defect: the `mushroom` pin carried a stale trailing comment
+  claiming HA 2026.7 while `ha_checked` said 2026.9 — a leftover from an
+  earlier edit. Fixed, and `verify.py` gained a tenth check (metadata lines
+  with two comments), negative-tested.
+- New pins recorded for the two added components. SGCC's is deliberately
+  vague (`4.02-era`) because the bundle is minified and carries no readable
+  version constant — an honest pin beats a guessed one.
+
+### Behavioural tests
+
+- `#eval-12-graph-request` — a German-language prompt asking for an overview
+  page full of graphs, exercising the engagement-type argument, the Advanced
+  History alternative, dependency declaration, and the `data_source`
+  performance point in one case.
 
 ---
 
+## v1.5 — 2026-08-29
 
-### Full-scope review — structural optimisation + ecosystem alignment (2026-07-03)
+Component currency: Bubble Card v3.3.0 support and alignment with Home
+Assistant 2026.8/2026.9. Verified against the v3.3.0 source tree and HA
+release notes through 2026.9.
 
-**Structural (token footprint + one-source-of-truth):**
-- Deleted `references/dashboard-recipes.md` (~50 KB) — verified 100% duplicate
-  of content inside `dashboard-system.md`, referenced nowhere. Cross-check:
-  chunk-level containment scan, 0 unique chunks.
-- Deduplicated `dashboard-system.md#view-overview` and `#view-rooms`: full
-  YAML removed (the refined copies in `recipes-5view.md` Recipes 8–9 are the
-  single source), sections rewritten as design rationale + component notes +
-  pointer. Cross-check: component/entity coverage scan confirmed Recipes 8–9
-  are supersets; the one divergent placeholder (`sensor.lights_on_count` vs
-  `binary_sensor.any_light_on`) noted in prose. Scenes/Activity/Settings/
-  Energy/Music scaffolds intentionally remain in dashboard-system.md — their
-  recipes summarise patterns and point here; that division is by design.
+### Bubble Card 3.2.5 → 3.3.0
 
-**Ecosystem alignment (researched against HA 2026.1–2026.7 release notes):**
-- New `dashboard-system.md#native-first` — the native-first check (parallel
-  to automate-first): battery grids → Maintenance dashboard, security logs →
-  Security Activity list, weather forecasts → weather tile features, media
-  transport → media tile features. Plus "when is a custom Bubble dashboard
-  worth it?" positioning vs the native Home dashboard (default since 2026.2)
-  and hybrid-setup guidance. Advisory tone throughout.
-- New `dashboard-system.md#native-interop` — mixing native tile/heading/area
-  cards into Bubble layouts: what inherits from the Casa5HeyneV2 theme, what
-  doesn't (--bubble-* vars, modules), when native wins, visual grouping rules.
-- New `health-check-ref.md` native-feature advisory category (Advisory only).
-- New `streamline-ref.md#maintenance-status` — honest project-health note
-  (single maintainer, decluttering-card lineage, graceful degradation path).
-- New paid-module boundary rule in `module-authoring-ref.md#sharing-a-module`
-  + Common Pitfalls row: never reproduce Patreon module code; explain, route,
-  or author an original module instead.
+- **Platform conditions documented.** v3.3.0 ports Home Assistant's own
+  `domain.name` conditions to the client — 141 of them (`sun.is_up`,
+  `motion.is_detected`, `climate.is_heating`, `lock.is_unlocked`,
+  `zone.in_zone`, `select.is_option_selected`…) usable directly in
+  `visibility:`. Documented with the caveats that matter: astral maths is
+  approximated, `for:` durations drift because there is no recorder priming
+  pass, recorder-history conditions cannot be ported, and an unsupported type
+  falls back to a silent state check rather than failing loudly. Explicitly
+  version-gated — on < 3.3.0 these misbehave rather than error.
+- **Lovelace condition table completed** — `not`, `time`, `location`,
+  `template` and `view_columns` were supported but undocumented.
+- **`grid_options`** added: native HA sections sizing (`{rows, columns}`),
+  preferred over `rows:` inside a sections view.
+- **Installation change for manual installs.** The `translations/` folder is
+  gone; editor dictionaries now sit beside `bubble-card.js` as
+  `bubble-card-<lang>.json`. Documented in §1 with two troubleshooting entries
+  (editor reverting to English, "Custom element doesn't exist" after update).
+- **Six undocumented per-sub-button options** added: `sub_button_type`
+  (now including `dropdown`), `show_button_info`, `hide_when_parent_unavailable`,
+  `light_background`, `css_class` (the supported alternative to brittle
+  `nth-child` selectors in `styles:`), and the `always_visible` interaction
+  with `slider_value_position`.
+- Signal Scan row for conditional-visibility requests, so the version gate
+  fires before generation rather than after.
 
-**New capabilities:**
-- `dashboard-system.md#entity-inventory` — Developer Tools → Template snippet
-  producing an area-grouped, device-class-annotated entity list for the
-  Collect step (one-off evaluation, within Iron Law scope).
-- `dashboard-system.md#masonry-migration` — masonry → sections migration
-  guide: don't-convert-in-place workflow, construct mapping table,
-  card_layout re-check, verification pointers.
-- `dashboard-system.md#wall-panel-hardening` — advisory notes: burn-in,
-  screen-off automation handoff, kiosk-mode/Fully Kiosk pointers (named, not
-  configured), dedicated non-admin user, stale-cache reliability.
+### Module authoring — two missing chapters
 
-**Routing & metadata:**
-- SKILL.md: process-tree routes for masonry migration and native interop;
-  §2 "Native first" subsection; Collect/Classify steps extended; two new
-  Common Pitfalls rows; §8 Scope checklist items (native-first advisory,
-  no paid-module reproduction); §6 project-health pointer; anchor lists
-  updated; frontmatter TRIGGERS/SYMPTOMS extended; `ha_checked: 2026.7`.
-- README: file tree completed (module-authoring-ref.md), coverage table
-  extended (native interop, module authoring).
-- available-skills-entry.md: new triggers (masonry migration, native-vs-
-  custom decisions) and symptoms (rebuilding native features without
-  advisory, reproducing paid module code).
-- CHANGELOG: standing per-HA-release verification checklist added (above).
+Diffed the skill's module reference against Bubble Card's own bundled
+`src/modules/module-documentation.md` (1422 lines). Two substantial chapters
+were absent:
 
+- **New `#module-performance`.** Module `code:` runs on every style pass of
+  every carrying card, and a pop-up rebuilds all its cards on each open —
+  roughly seven passes per card. v3.3.0 adds `hasChanged(label, ...values)`
+  and `onTeardown(fn)` to gate work and release timers/observers. Upstream
+  measured one module going from 7.2 s to 3.7 s cold pop-up open on a low-end
+  iPad. Includes the compatibility rule that matters most: referencing a name
+  the installed version lacks throws and makes Bubble Card skip the *entire*
+  module, so `typeof` guards are mandatory for shared modules.
+- **New `#module-suggestions`.** Modules can join the HA 2026.6+ card picker
+  via `suggestions:` (`extends: native|base`, `config` with `${entity}`,
+  `domains`, `condition`, `label`) or `suggestions_code:` for computed
+  configurations. 24 suggestions per module per entity, no global cap.
 
-### Source-verified scan — Bubble Card v3.2.5 + Mushroom v5.2.2 (2026-08-06)
+### Home Assistant 2026.8 / 2026.9 alignment
 
-Full scan of both component source trees, not release notes or docs.
+- **Breaking change handled: vacuum `battery_level` removed (HA 2026.8).** Two
+  places in the skill generated `attribute: battery_level` sub-buttons — the
+  generic battery example and the Streamline device template. Both now use the
+  device's battery *sensor* with `show_state: true`. Troubleshooting entry
+  added listing the eight affected integrations.
+- **Developer Tools → Tools rename (HA 2026.8)** applied across all references,
+  with the old name noted where a user on an older version would look for it.
+- **New `dashboard-system.md#entity-rename-risk`.** Renaming entity IDs became
+  a two-click UI operation in 2026.8, and HA's repair flow covers automations
+  and scripts far better than Lovelace — a renamed entity leaves a card showing
+  "Entity not available", silently. Guidance sequences the work (rename, then
+  repair via §9 health check) rather than discouraging it. Signal Scan row and
+  troubleshooting entry added.
+- **Native-first table extended** with the capacity-weighted combined battery
+  level (2026.8) and the clock card's date support (2026.8).
+- **Accessibility section strengthened.** HA 2026.9 makes charts a real focus
+  stop — keyboard-navigable data points, live-region announcements, and an
+  audio tone tracking the curve. That is a concrete capability a custom graph
+  card cannot match, and it is now part of the native-alternative argument.
+- **Template performance note.** HA 2026.8 made numeric templates up to 40%
+  faster and cached dashboard templates. The scope rule is unchanged, but a
+  template sensor can no longer be justified on performance grounds alone.
+- Device-registry split (2026.8) noted in troubleshooting: entity-based card
+  YAML is unaffected; only device-ID references need review.
 
-**Bubble Card v3.2.5 (released 2026-07-10):**
-- Version pin raised 3.2.4 → 3.2.5; compat table row added.
-- **Cover tilt support documented** — `tilt_buttons` (top/bottom/left/right/
-  hidden), `open_tilt_service`, `close_tilt_service`, plus
-  `cover_slider_type: position|tilt_position` for slider-driven tilt on both
-  the card slider and slider sub-buttons. Includes the feature-detection rule
-  (only emit tilt options when the entity reports OPEN_TILT / CLOSE_TILT /
-  SET_TILT_POSITION) and two troubleshooting entries.
-- Pop-up fixes noted: shared `hui-card` no longer hidden inside grid/masonry
-  layout boundaries; improved shell detach on leaving editor mode.
+### Method note
 
-**Method fix — the previous scan had a blind spot.** The v3.2.4 verification
-checked editor schemas only, which misses every YAML option not surfaced in
-the editor. A full `config.*` scan of the source found **24 undocumented
-options**, now added:
-- Slider: `slider_value_position`, `relative_slide`, `invert_slider_value`,
-  `hue_force_saturation` + `hue_force_saturation_value`, `cover_slider_type`
-- sub-buttons card: `menu_style`, `labels_below`, `hide_button_labels`,
-  `compact_mode`, `space_between_buttons`, `footer_width` (with the
-  `labels_below` requires `menu_style` gotcha)
-- Calendar: `event_action`, `show_place`, `show_started_events`
-- Core: `show_last_updated`, `sub_button_justify_content`
-- Climate: `hide_temperature`
+The `config.*` source scan produced two false positives this round —
+`unit_system` and `time_zone` are `hass.config.*` reads, not YAML options.
+Scanning for `config.` alone conflates the card config with the HA config
+object; distinguish the two before documenting an option.
 
-**Iron Law violation fixed in the skill's own example.** The calendar recipe
-used `color: '#D9BE8B'`. Source shows `color:` resolves a colour *name* to
-`var(--<name>-color)`, so `color: accent` is theme-compliant. Example
-corrected, rule documented, Common Pitfalls row added.
+---
 
-**Mushroom v5.2.2 — two factual errors corrected:**
-- `mush-rgb-state-switch` does not exist. Switch entities are coloured by
-  `mush-rgb-state-entity`. Removed from docs and theme template.
-- `mush-rgb-primary` does not exist. The accent bridge now wires
-  `accent-color-rgb` into the specific state variables instead.
-- Added the missing state groups: vacuum, media-player, lock (+ locked /
-  unlocked / pending), number, humidifier, and update — including the
-  upstream naming inconsistency (`mush-rgb-update-off` and
-  `mush-rgb-update-installing` carry no `state-` segment).
-- Five new Mushroom troubleshooting entries covering these traps.
+## v1.4 — 2026-08-06
 
-**Theme divergence resolved.** `theme/Casa5HeyneV2.yaml` and
-`references/casa5heynev2-template.yaml` had drifted: the shipped theme was
-missing the entire ZONE 6 state mapping (45 keys) and its light mode lacked
-every `mush-rgb-*` colour the dark mode had — meaning Mushroom silently fell
-back to its own defaults in light mode. Both files are now aligned and
-YAML-validated, with the corrected (non-existent-variable-free) ZONE 6.
+Ecosystem alignment, source-verified component updates, and a rebuilt routing
+layer. Verified against Bubble Card v3.2.5 source, Mushroom v5.2.2 source, and
+HA release notes through 2026.7.
 
+Development detail for this release is preserved in
+`CHANGELOG-v1.4-detail.md`; this entry is the summary.
 
-### Tooling, coverage and honesty pass (2026-08-06)
+### Component updates
 
-**New: `verify.py`** — a dependency-light structural self-check, run from the
-skill root. Eight checks, each of which exists because that bug class shipped
-at least once: anchor integrity, SKILL.md anchor-list sync, YAML validity,
-theme light/dark symmetry, banned (nonexistent) component variables, Iron Law
-in card examples, version-string consistency, orphaned reference files. It
-found five stale anchor-list entries and one version drift on first run.
+- **Bubble Card pin 3.2.2 → 3.2.5.** Compat table rows for v3.2.3 (card
+  suggestions via the HA 2026.6 picker, `close_action` fix, iOS pop-up
+  visibility), v3.2.4 (standalone pop-ups reliable inside `vertical-stack`;
+  true pop-up-in-pop-up nesting still unsupported) and v3.2.5 (cover tilt —
+  `tilt_buttons`, `open_tilt_service`, `close_tilt_service`,
+  `cover_slider_type: tilt_position`, with the feature-detection rule).
+- **New Mushroom pin 5.2.2**, verified against `src/utils/theme.ts`.
+- **24 previously undocumented Bubble Card options added.** The earlier
+  verification scanned editor schemas only, which misses every YAML option the
+  editor does not surface. A full `config.*` source scan closed the gap:
+  six slider options, the six sub-buttons layout options, three calendar
+  options, plus `show_last_updated`, `sub_button_justify_content` and
+  `hide_temperature`.
 
-**New: `references/eval-set.md`** — ten behavioural regression prompts with
-MUST / MUST NOT criteria, run in fresh conversations. Until now every claim
-that a release improved output quality was structural ("the guidance is in the
-file"); this makes it testable and gives future versions a regression baseline.
+### Corrections
 
-**Theme de-duplication.** `references/casa5heynev2-template.yaml` deleted;
-`theme/Casa5HeyneV2.yaml` is now the single source for both generation and
-user installation, with all 10 references rewired. The two copies had already
-drifted twice (ZONE 6 missing entirely from the shipped file, mode-specific
-disabled greys differing) — the same failure mode as the deleted
-`dashboard-recipes.md`. `verify.py`'s theme-symmetry check guards the
-remaining risk.
+- **Iron Law violation in the skill's own calendar example.** It used a
+  hardcoded hex; `color:` resolves a colour *name* to `var(--<name>-color)`,
+  so `color: accent` was available all along.
+- **Two nonexistent Mushroom variables removed** — `mush-rgb-state-switch`
+  (switches follow `mush-rgb-state-entity`) and `mush-rgb-primary`. Both were
+  documented across 22 places and would have silently done nothing. Added the
+  missing state groups (vacuum, media-player, lock + sub-states, number,
+  humidifier, update) including the upstream quirk that `mush-rgb-update-off`
+  and `-installing` carry no `state-` segment.
+- **Module-authoring corrections** — removed a `variables:` + `{{mustache}}`
+  pattern that does not exist in Bubble Card's module system, and the
+  nonexistent `supported: [all]` literal.
 
-**Test dashboard is now a real smoke test.** Extended from 8 to all 11
-documented card types (added `calendar`, `select`, `empty-column`, plus a
-tilt-enabled cover). Fixed two defects found while doing so: the file claimed
-skill v1.5, and the HBS footer was not the last top-level card — the file
-violated a rule the skill itself enforces.
+### Native HA alignment
 
-**Entity domain map extended.** Added `siren`, `remote` and `lawn_mower` (a
-Bubble Card toggle domain with a built-in icon, previously absent), and
-documented `valve`, `water_heater`, `todo` and `image` as having no Bubble
-Card support with the native-card fallback. Added the explicit toggle/slider
-domain lists from v3.2.5 source, so unsupported domains produce an honest
-answer rather than a control that renders but silently does nothing.
+- New `#native-first` — the native-first check (parallel to automate-first):
+  battery grids → Maintenance dashboard, security logs → Security Activity
+  list, weather and media → tile features. Plus positioning against the native
+  Home dashboard (default for new installs since HA 2026.2) and hybrid setups.
+- New `#native-interop` — mixing native tile/heading/area cards into Bubble
+  layouts: theme inheritance, Bubble-mechanism boundaries, grouping rules.
+- Health-check gained a native-feature advisory category (Advisory only).
 
-**Accessibility — limits stated plainly.** New subsection in §2: Bubble Card's
-div-based controls are not screen-reader operable, sliders expose no role or
-value, tap targets are generally outside the tab order, and pop-ups do not
-trap focus. No card option fixes this, so the guidance is to say so and offer
-native tile cards, voice/Assist or automation instead. Explicit instruction
-never to claim WCAG conformance on the basis of the contrast checks.
+### Process routing rebuilt
 
-**Localisation.** New §2 subsection: generate `name:` labels in the user's
-language, keep navigation hashes ASCII, and let entity friendly names win
-where a voice assistant is in use. Bubble Card localises its editor but not
-dashboard labels — those come from generated YAML.
+- **New Signal Scan layer.** The process tree routed on *output type*, but
+  most failure modes are *input signals* — the user's language, a stated
+  accessibility need, a natively covered feature, an unsupported entity
+  domain. A nine-row scan now runs ahead of the tree, is multi-select, and
+  never withholds output. Actively routed eval cases: 3/10 → 10/10.
+- **Process tree completed** — `calendar`, `select`, `separator` and
+  `sub-buttons` were documented but had no route at all. Added, plus a branch
+  for requests that describe a situation rather than name a card.
+- Common Pitfalls trimmed 17 → 13 rows; four were intake signals and moved.
 
-**Note on Sidebar Card:** a project-health section was considered for parity
-with Streamline's new `#maintenance-status`, but `sidebar-ref.md#known-issues`
-already covers maintenance status, both known issues and the Bubble
-sub-buttons fallback. No change made.
+### New capabilities
+
+- `#entity-inventory` — Developer Tools template snippet producing an
+  area-grouped, device-class-annotated entity list for the Collect step.
+- `#masonry-migration` — masonry → sections with a construct mapping table.
+- `#wall-panel-hardening` — burn-in, screen-off handoff, kiosk pointers.
+- `module-authoring-ref.md` — Bubble Card editor field catalog, v3.2.4 object
+  selector, both export formats, plus the paid-module boundary rule.
+- Localisation rule and an honest statement of Bubble Card's accessibility
+  limits (div-based controls are not screen-reader operable; never claim WCAG
+  conformance from contrast checks alone).
+- Entity domain map extended with `siren`, `remote`, `lawn_mower`, and
+  explicit no-support entries for `valve`, `water_heater`, `todo`, `image`.
+
+### Tooling
+
+- **`verify.py`** — nine structural checks (anchors, anchor-list sync, YAML
+  validity, theme mode symmetry, banned variables, Iron Law in card examples,
+  version consistency, routing coverage, orphan files). Each exists because
+  that bug class shipped at least once; the routing check is negative-tested.
+- **`references/eval-set.md`** — ten behavioural regression prompts with
+  MUST / MUST NOT criteria, run in fresh conversations.
+
+### Structural
+
+- Deleted `dashboard-recipes.md` (~50 KB, verified duplicate, referenced
+  nowhere) and `casa5heynev2-template.yaml` (theme existed in two copies that
+  had already drifted twice). `theme/Casa5HeyneV2.yaml` is now the single
+  theme source.
+- Overview and Rooms view YAML deduplicated — `recipes-5view.md` Recipes 8–9
+  are the single source; `dashboard-system.md` keeps design rationale.
+- Token routing: `health-check-ref.md` split into five anchors (core path
+  −14%), and the two largest view anchors split into design notes plus a
+  separate `-scaffold` anchor so planning does not load generation YAML.
+- Test dashboard is now a real smoke test — all 11 documented card types
+  (was 8), with two defects fixed: a stale version string and an HBS footer
+  that was not the last top-level card.
 
 
 ## v1.3 — 2026-06-05

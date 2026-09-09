@@ -30,14 +30,23 @@ This skill teaches Claude to generate complete, production-quality Lovelace YAML
 ha-bubble-dashboard/
 ├── README.md                           ← you are here
 ├── SKILL.md                            ← main skill file (iron laws, process, §§1–9)
-├── CHANGELOG.md                        ← version history and update triggers
+├── CHANGELOG.md                        ← release entries (summarised)
+├── CHANGELOG-v1.4-detail.md            ← full working record of the v1.4 passes
 ├── available-skills-entry.md           ← system prompt entry for disk-based usage
-├── verify.py                           ← structural self-check — run before every release
+│
+├── scripts/                            ← repository tooling — NOT part of the installed skill
+│   ├── verify.py                       ← structural self-check — run before every release
+│   ├── test_verify.py                  ← negative tests: proves verify.py catches what it claims
+│   ├── token_budget.py                 ← guards the per-session token cost
+│   ├── token-baseline.json             ← committed baseline for drift detection
+│   └── check_upstream.py               ← compares component pins against upstream releases
+├── .github/workflows/                  ← CI: verify on push, weekly drift check, tagged release
 │
 ├── references/
 │   ├── bubble-card-ref.md              ← all card types, CSS vars, JS API, version compat, performance
 │   ├── colour-intelligence-ref.md      ← palette recipes, WCAG checks, advisory flow
 │   ├── css-theme-ref.md                ← full HA/Bubble var() chain catalogue
+│   ├── graphs-ref.md                   ← graph card decision guide, SGCC, Advanced History panel
 │   ├── eval-set.md                     ← behavioural regression tests (10 prompts + criteria)
 │   ├── dashboard-system.md             ← 5-view architecture, workflow, native-first check, device profiles, masonry migration, wall-panel hardening, view scaffolds
 │   ├── health-check-ref.md             ← YAML audit: parse steps, finding categories, output format
@@ -59,20 +68,77 @@ ha-bubble-dashboard/
 
 ---
 
+## Repository layout
+
+Everything at the top level is **the skill** — that is what a release bundle
+contains and what users install. `scripts/` and `.github/` are repository
+tooling and are excluded from the bundle, so nobody installs a test harness
+they will never run.
+
+---
+
 ## Verifying the library
 
 ```bash
-python3 verify.py        # exit 0 = clean
+python3 scripts/verify.py        # exit 0 = clean
+python3 scripts/test_verify.py   # 11/11 guards working
 ```
 
-Checks anchor integrity, SKILL.md's anchor lists, YAML validity, theme
-light/dark symmetry, banned (nonexistent) component variables, the Iron Law in
-card examples, version-string consistency, and orphaned reference files. Every
-one of these checks exists because that class of bug shipped at least once.
+`verify.py` runs twelve structural checks: anchor integrity, SKILL.md's anchor
+lists, YAML validity (including every fenced YAML example in the docs — these
+are the product, users copy them), theme light/dark symmetry, banned
+(nonexistent) component variables, the Iron Law in card examples,
+version-string consistency, Anthropic's SKILL.md frontmatter spec, metadata
+sanity, routing coverage, and orphaned reference files. Every one exists
+because that class of bug shipped at least once.
 
-Behavioural testing is separate: `references/eval-set.md` holds ten prompts
-with pass/fail criteria, run in fresh conversations. `verify.py` proves the
+`test_verify.py` is the answer to "who checks the checker": it injects each bug
+class into a throwaway copy of the library and asserts `verify.py` still
+catches it.
+
+Behavioural testing is separate: `references/eval-set.md` holds twelve prompts
+with pass/fail criteria, run in fresh conversations. The scripts prove the
 library is structurally sound; the eval set proves it changes behaviour.
+
+---
+
+## Token budget
+
+SKILL.md is loaded in full for every request; reference files are
+anchor-routed and only cost what is actually read. Those two facts pull in
+opposite directions — the library can grow indefinitely without hurting
+anyone, but SKILL.md cannot.
+
+```bash
+python3 scripts/token_budget.py            # report
+python3 scripts/token_budget.py --check    # CI: exit 1 if over budget
+python3 scripts/token_budget.py --update   # move the baseline deliberately
+```
+
+Two budgets are enforced: SKILL.md against a ceiling, and any single anchor
+against a size above which routing stops helping. Growth beyond 5% over the
+committed baseline is reported so it becomes a decision rather than a drift.
+Counts are estimated from character counts weighted by content type, so expect
+±10% against a real tokeniser — the useful signal is the trend.
+
+---
+
+## Continuous integration
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `verify.yml` | push, PR | `verify.py`, `test_verify.py`, and `token_budget.py --check`. On PRs, comments the SKILL.md token delta. Link check runs alongside, advisory only. |
+| `upstream-drift.yml` | Mondays 06:00 UTC | Compares component pins against the latest upstream releases; opens or updates one issue when a pin falls behind. |
+| `release.yml` | tag `v*` | Verifies, checks the tag matches SKILL.md metadata, builds the `.zip` and `.skill` bundle *without* `scripts/`, verifies the packaged tree, and publishes a GitHub Release. |
+
+```bash
+python3 scripts/check_upstream.py                  # report
+GITHUB_TOKEN=… python3 scripts/check_upstream.py --json
+```
+
+The drift check exists because every stale-guidance incident in this skill's
+history began the same way — a component shipped a release and nobody noticed
+for weeks.
 
 ---
 
@@ -190,8 +256,8 @@ See `references/dashboard-system.md` for the complete architecture and
 
 ## Version
 
-Current: **v1.4** (2026-08-06)  
-Component pins: Bubble Card 3.2.5 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0 · guidance verified against HA 2026.7
+Current: **v1.6** (2026-08-29)  
+Component pins: Bubble Card 3.3.0 · SGCC (README-documented) · Advanced History 2.0.1 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0 · guidance verified against HA 2026.9
 
 See `CHANGELOG.md` for full version history and update triggers.
 
