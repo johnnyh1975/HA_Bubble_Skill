@@ -199,6 +199,44 @@ three, the **user's own wording describes the wrong answer**.
   tokens; baseline moved.
 - `verify.py` caught the README and test-dashboard version strings left at 1.7.
 
+**`release.yml`'s manual trigger could not work, and two latent bugs behind
+it.** The workflow declared `workflow_dispatch`, but every step derived the
+version from `GITHUB_REF_NAME`, which on a dispatch is the *branch* name. The
+run died at the version check with `Tag vmain does not match SKILL.md version
+1.8`; had it got past that, the publish step had no tag to publish to, because
+`action-gh-release` was given no `tag_name`. A button that can only fail with
+a confusing message is worse than no button.
+
+- The version is now resolved **once**, in its own step, and every later step
+  reads `$VERSION` from the environment. It had been re-derived in four
+  places.
+- On a **tag push** the tag stays authoritative and must still match
+  `SKILL.md`. On a **dispatch** `SKILL.md` is authoritative and the publish
+  step creates the tag at the commit being released — so a release no longer
+  requires the ability to push a tag.
+- A dispatch **refuses to move an existing tag**: if `vX.Y` already exists at
+  a different commit the run fails and says so, rather than silently
+  re-pointing a published release at another tree. `actions/checkout` runs
+  with `fetch-tags: true`, because the default shallow checkout fetches no
+  tags and that check would otherwise always pass.
+- **The changelog-extraction regex was wrong.** `^## v{version}\b` treats the
+  boundary between `8` and `.` as a word boundary, so asking for `1.8` matched
+  a `## v1.8.1` heading — and matched it *first*, being higher in the file. The
+  first patch release would have shipped the wrong release notes. Now
+  `(?![\d.])`.
+- `concurrency` is keyed on the workflow rather than on `github.ref`: a
+  dispatch from a branch and a tag push for the same version are different
+  refs, so the old group let them run against each other.
+- `actions/setup-python` v5 → v6. v5 targets Node 20, which the runners now
+  force onto Node 24 with a deprecation warning.
+- Corrected the file's header comment, which claimed the repo had no tags and
+  no releases. It has had both since v1.0; the comment predated them and then
+  misled a later reader into repeating the claim.
+
+All five trigger shapes were run against the extracted step before pushing:
+dispatch from a branch, a matching tag, a mismatched tag, a dispatch colliding
+with an existing tag, and a dispatch with no such tag.
+
 
 ## v1.7 — 2026-09-19
 

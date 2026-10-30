@@ -1,8 +1,17 @@
 name: release
 
-# The repo has published versions but no GitHub Releases and no tags — every
-# version so far has been a zip passed around by hand. This makes a tag the
-# single action that produces a downloadable, verified bundle.
+# Produces the downloadable, verified bundle for a version. Two ways in:
+#
+#   - push a tag `vX.Y`      — the version comes from the tag, and must match
+#                              SKILL.md or the run fails
+#   - run it from the UI     — the version comes from SKILL.md, and the tag is
+#     (workflow_dispatch)      created at the commit being released
+#
+# The second exists because pushing a tag is not always available to whoever
+# is doing the release. It used to be a trap: every step read the version from
+# GITHUB_REF_NAME, which on a dispatch is the *branch* name, so the run died
+# with "Tag vmain does not match SKILL.md version 1.8" and the publish step
+# had no tag to publish to anyway. The version is now resolved once, below.
 
 on:
   push:
@@ -14,9 +23,11 @@ permissions:
   contents: write
 
 # Never let two releases race; a cancelled half-published release is worse
-# than a queued one.
+# than a queued one. Keyed on the workflow, not on the ref: a dispatch from a
+# branch and a tag push for the same version are different refs and would
+# otherwise not see each other.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
@@ -25,9 +36,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # fetch-tags so the dispatch path can tell whether the tag it is about
+      # to create already exists; the default shallow checkout fetches none.
       - uses: actions/checkout@v7
+        with:
+          fetch-tags: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -37,11 +52,16 @@ jobs:
       - name: Verify before packaging
         run: python3 scripts/verify.py
 
-      # The tag and the version inside SKILL.md must agree, or the bundle
-      # claims to be something it is not.
-      - name: Check tag matches SKILL.md metadata
+      # The one place the version is decided. Every later step reads $VERSION
+      # from the environment rather than re-deriving it from the ref, which is
+      # what made a dispatch impossible.
+      #
+      # On a tag push the tag is authoritative and must agree with SKILL.md,
+      # or the bundle claims to be something it is not. On a dispatch there is
+      # no tag yet, so SKILL.md is authoritative and the publish step creates
+      # the tag.
+      - name: Resolve the version
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
           SKILL_VERSION=$(python3 - <<'PY'
           import re
           text = open('SKILL.md', encoding='utf-8').read()
@@ -49,15 +69,33 @@ jobs:
           print(re.search(r'^\s*version:\s*([\d.]+)', block, re.M).group(1))
           PY
           )
-          echo "tag=$TAG  SKILL.md=$SKILL_VERSION"
-          if [ "$TAG" != "$SKILL_VERSION" ]; then
-            echo "::error::Tag v$TAG does not match SKILL.md version $SKILL_VERSION"
-            exit 1
+
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            echo "triggered by tag $GITHUB_REF_NAME — tag=$TAG_VERSION  SKILL.md=$SKILL_VERSION"
+            if [ "$TAG_VERSION" != "$SKILL_VERSION" ]; then
+              echo "::error::Tag v$TAG_VERSION does not match SKILL.md version $SKILL_VERSION"
+              exit 1
+            fi
+            VERSION="$TAG_VERSION"
+          else
+            VERSION="$SKILL_VERSION"
+            echo "triggered manually from $GITHUB_REF_NAME — releasing v$VERSION from SKILL.md"
+            # Refuse to move a tag that already exists somewhere else: that
+            # would silently re-point a published release at a different tree.
+            if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+              EXISTING=$(git rev-parse "refs/tags/v$VERSION^{commit}")
+              if [ "$EXISTING" != "$GITHUB_SHA" ]; then
+                echo "::error::Tag v$VERSION already exists at $EXISTING, not at $GITHUB_SHA. Bump the version in SKILL.md, or delete the tag deliberately."
+                exit 1
+              fi
+            fi
           fi
+
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Build bundle
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p dist/HA_Bubble_Skill
           # The bundle is what users install as a skill. Repository tooling
           # and development history are not part of it.
@@ -83,7 +121,6 @@ jobs:
           (cd dist/HA_Bubble_Skill && python3 scripts/verify.py)
           rm -rf dist/HA_Bubble_Skill/scripts
           # Re-zip without the temporary scripts copy
-          VERSION="${GITHUB_REF_NAME#v}"
           rm -f "dist/HA_Bubble_Skill_v${VERSION}.zip" \
                 "dist/ha-bubble-dashboard-v${VERSION}.skill"
           (cd dist && zip -rq "HA_Bubble_Skill_v${VERSION}.zip" HA_Bubble_Skill \
@@ -94,21 +131,30 @@ jobs:
       # every release. Extract just this version's section.
       - name: Extract this version's changelog section
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           python3 - "$VERSION" <<'PY' > release-body.md
           import re, sys
           version = sys.argv[1]
           text = open('CHANGELOG.md', encoding='utf-8').read()
-          m = re.search(rf'(?ms)^## v{re.escape(version)}\b.*?(?=^## v\d)', text)
+          # (?![\d.]) and not \b: the boundary between "8" and "." IS a word
+          # boundary, so `v1.8\b` matched a `## v1.8.1` heading — and matched it
+          # first, being higher in the file. The first patch release would have
+          # shipped the previous version's notes.
+          m = re.search(rf'(?ms)^## v{re.escape(version)}(?![\d.]).*?(?=^## v\d)', text)
           if not m:
               sys.exit(f'No changelog section found for v{version}')
           print(m.group(0).rstrip())
           PY
           head -5 release-body.md
 
+      # tag_name is explicit so a dispatch works: on that path no tag exists
+      # yet, and the action creates it at the commit being released. On a tag
+      # push it resolves to the same tag that triggered the run.
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ env.VERSION }}
+          name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
           files: |
             dist/HA_Bubble_Skill_v*.zip
             dist/ha-bubble-dashboard-v*.skill
