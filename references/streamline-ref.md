@@ -165,6 +165,25 @@ my_light_template:
     icon: '[[icon]]'
 ```
 
+**The "this instance lacks that sensor" problem.** A template is normally
+forked into two the moment one room has no humidity sensor, no power meter, no
+second light. Three ways out, in order of preference:
+
+1. **`visibility:`** on the sub-button or card, driven by a variable — the
+   Bubble Card answer, and the one that keeps one template.
+2. **A `default:` of an empty string** so the optional key renders as nothing.
+   Works, but a Bubble Card sub-button with an empty `entity:` still occupies
+   width.
+3. **Statistics Graph Chart Card's per-entity `enabled:`** — if the template
+   wraps an SGCC card, `enabled: '[[has_power]]'` makes that series behave as
+   if it were never configured: nothing fetched, no palette slot, and the
+   entity id is **not even validated**, so an unsubstituted placeholder is
+   harmless. Upstream documents this as built for Streamline specifically. See
+   `graphs-ref.md#sgcc-dashboard-use`.
+
+Forking the template is the last resort, not the first — `#dry-decision`
+covers when two templates genuinely beat one.
+
 ---
 
 ## #javascript-keys

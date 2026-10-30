@@ -40,9 +40,14 @@ COMPONENTS = {
 
 # Tracked but not pinned to a comparable version string.
 UNPINNABLE = {
+    # The bundle is minified, so the source cannot be reviewed — but the version
+    # string survives in the string table, so the pin is a real version and the
+    # manual check is one grep. Kept out of COMPONENTS only because the repo's
+    # release-tag format is unverified, not because the version is unknowable.
     "sgcc": ("cataseven/Statistics-Graph-Chart-Card",
              "Statistics Graph Chart Card",
-             "minified bundle — pin is an era, not a version; check manually"),
+             "minified bundle — check with: "
+             "grep -o \"'4\\.[0-9][0-9]'\" statistics-graph-chart-card.js"),
     "bubble_card_tools": ("Clooos/Bubble-Card", "Bubble Card Tools",
                           "ships inside the Bubble Card repo"),
 }

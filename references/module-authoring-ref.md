@@ -601,6 +601,38 @@ module object, keys in this order: `name, version, creator, link, supported,
 description, code, editor`, plus `is_global` only if `true`. Omit `supported`
 entirely if the module applies to every card type, omit `link` if empty.
 
+**The full key set the parser accepts**, including spellings kept for backward
+compatibility (verified against `modules/parser.js`):
+
+| Key | Notes |
+|---|---|
+| `name`, `version`, `description`, `code`, `editor` | the core set |
+| `creator`, `link` | attribution, shown in the Module Store |
+| `supported` | card types this module applies to. Also accepted: `supported_card`, `supported_cards` |
+| `unsupported` | the inverse — card types to exclude. Also `unsupported_card`, `unsupported_cards` |
+| `is_global` | applies the module to every card without per-card opt-in |
+| `form_schema` | legacy alias of `editor` |
+| `author`, `type`, `info` | legacy; `info` is a container whose known fields are lifted out |
+
+**Generate the modern spellings only** — `supported`, `unsupported`, `editor`.
+The aliases exist so old modules keep loading, not as choices.
+
+**`unsupported:` is worth knowing about**, since it is absent from most module
+examples: where `supported:` is an allow-list, `unsupported:` excludes. For a
+module that fits everything except one card type, excluding it is shorter and
+does not need updating when Bubble Card adds a card type.
+
+**`is_global: true` applies a module to every card on the dashboard**, with no
+per-card `modules:` entry. Powerful and easy to regret — a global module runs
+its `code:` on every style pass of every card, so the performance rules in
+`#module-performance` stop being optional. Prefer a normal module the user opts
+into per card, and reach for global only when the effect genuinely must be
+everywhere (a house-wide typography tweak).
+
+**`!include` works inside module YAML**, resolved relative to `/local/bubble/`.
+Useful for keeping a long `code:` block in its own file. It is fetched
+synchronously over XHR, so it is skipped in environments without it.
+
 ```yaml
 icon_badge_set:
   name: "Icon Badge Set"

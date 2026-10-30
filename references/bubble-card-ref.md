@@ -2,7 +2,7 @@
 # ha-bubble-dashboard skill — Phase 3
 # Covers: all card types, CSS variables, JS template API,
 #         module workflow, version compatibility.
-# Source: Bubble Card v3.3.0 source tree (src/) + release notes v3.0–v3.3.0
+# Source: Bubble Card v3.4.2 source tree (src/) + release notes v3.0–v3.4.2
 
 ---
 
@@ -20,13 +20,38 @@
 | v3.2.4 | **Standalone pop-ups nested inside `vertical-stack` / `vertical-stack-in-card` now work correctly** (create, edit, remove, duplicate, move) — this pattern was broken/unreliable in v3.2.0–v3.2.3. Editor now shows an explicit "Nested pop-ups are not supported" warning card if a pop-up is placed inside another pop-up's own `cards:` block (this was always unsupported, just silent before). Improved module-editor object selector for module developers (groups, conditionals, variants — editor UI only, not YAML-facing). Various perf/cleanup fixes for pop-up DOM lifecycle. | If a recipe wraps a Bubble pop-up inside `vertical-stack`/`vertical-stack-in-card`, note it requires v3.2.4+. Never generate a pop-up nested inside another pop-up's `cards:` — this remains unsupported at every version. |
 | v3.2.5 | **Cover tilt support** — new `tilt_buttons` (position or `hidden`), `open_tilt_service`, `close_tilt_service` on the cover card, `cover_slider_type: tilt_position` on cover sliders and slider sub-buttons. Editor shows the tilt panel only when the entity reports `OPEN_TILT`/`CLOSE_TILT`/`SET_TILT_POSITION`. Pop-ups inside `grid`/masonry layout boundaries no longer hide the shared `hui-card`; improved pop-up shell detach on leaving editor mode. | Purely additive. Tilt YAML requires v3.2.5+ — on older versions the options are ignored. |
 | v3.3.0 | **Platform conditions** — HA's own `domain.name` conditions (`sun.is_up`, `motion.is_detected`, `climate.is_heating`… 141 total) now evaluate client-side in `visibility:`. **`grid_options`** supported for native sections sizing. **Editor translations moved** — the `translations/` folder is gone; dictionaries now sit beside `bubble-card.js` as `bubble-card-<lang>.json`. Dropdown component rewritten with HA 2026.3+ frontend detection (`ha-picker-field`). Legacy `style_templates:` auto-migrates to `modules:`. | Additive for YAML. **Manual installs must delete the old `translations/` folder** and copy the new JSON files; HACS handles it automatically. Platform conditions require v3.3.0+ — on older versions they silently degrade to a state check. |
+| v3.4.0 | **`state_content`** — one list replaces `show_state`, `show_attribute`, `attribute`, `show_last_changed` and `show_last_updated`, matching how HA writes its tile card and badges. **Home Assistant (Jinja2) templates** now work in `name`, `icon`, sub-button `name` and inside `state_content` items, alongside the existing JS `${ }` templates in `styles:`. **`popup_style: home-assistant`** — a third pop-up style that reproduces the whole more-info dialog, not just its header. Large render-performance rework (render gate, deferred card updates, lazy editor previews). | Additive and backward-compatible: the five legacy keys keep working and are read into the same list. **But opening a card in the visual editor rewrites them to `state_content` on save.** Generate `state_content` for v3.4.0+ and the legacy keys below it. |
+| v3.4.1 | **`slide_to_close`** on pop-ups — `true` (default) / `header` / `false`. Sub-button icons and text pick light or dark by **measured WCAG contrast** against the background they actually paint, replacing a luminance threshold; new `--bubble-sub-button-light-text-color`. Release of a swipe continues at the speed of the finger. Fixes v3.4.0 regressions: a pop-up header left on screen after navigating back, the dashboard shifting sideways when a pop-up opens. | Additive. `slide_to_close` is ignored on older versions, so the gesture stays enabled there — a pop-up you need undismissable needs v3.4.1+. If you had written a `styles:` override to force a dark icon on a light sub-button, **remove it** on v3.4.1+: the card now decides, and the override fights it. |
+| v3.4.2 | **Four new dropdown lists** — `fan_speed_list` (vacuum), `activity_list` (remote), `direction` (fan), `alarm_modes` (alarm panel, with an in-menu keypad when a code is needed). **`popup_style: home-assistant` now takes the full more-info sheet height on mobile** unless `popup_mode: adaptive-dialog`. **Calendar: tapping an event opens HA's event dialog** (description + location) and `event_action.tap_action` now defaults to `more-info`; the card also subscribes to the event list, so edits to any event show at once. `subButtonState[]` indexing fixed (#2165). Legacy pop-ups in a `grid` card are migratable and inherit the container's placement and `visibility:`. Memory leak on slider sub-buttons fixed. HA 2026.10 duplicate-user condition worked around. Old-Safari dropdown fix (#2663). | **Behaviour change on upgrade:** an existing `popup_style: home-assistant` pop-up with no `popup_mode` becomes full-height on mobile — add `popup_mode: adaptive-dialog` to keep it content-height. `event_action` left unset now makes events tappable; set `event_action: {tap_action: {action: none}}` to keep them inert. Everything else is additive. |
+
+> **Card order inside a pop-up affects how fast it feels.** Since v3.4.0 a
+> large pop-up renders only enough leading cards to fill the first viewport
+> before the open transition — the fold is estimated from each card's grid
+> span, with no layout read — and the rest start as placeholder cells that
+> hydrate one budgeted step at a time afterwards. Off-screen cards also skip
+> `hass` updates until they scroll into view.
+>
+> So the cards a user needs first should be **first in the `cards:` list**, not
+> merely visually prominent. This is the same ordering the engagement-type
+> model already asks for; it now has a measurable payoff. A pop-up whose most-
+> used control sits below the fold makes the user wait for hydration before
+> they can touch it.
+
+> **Why pop-ups must be top-level cards, mechanically.** A pop-up suspends the
+> layout cell (`hui-card`) that hosts it so it reserves no height in the view.
+> A pop-up placed directly inside a grid, masonry or `layout-card` container
+> has no cell of its own — the nearest one wraps the whole view, and suspending
+> that would collapse every card. Bubble Card therefore treats a layout or view
+> host as a boundary and suspends nothing, so the pop-up reserves visible empty
+> space in the layout. This is the mechanism behind the placement rule, not
+> just a convention.
 
 **Always generate v3.2+ formats.** Never generate the pre-v3.2 pop-up pattern (separate stack + pop-up card at the top of a view). Never reference `bubble-pop-up-fix.js`. Never nest a `card_type: pop-up` inside another pop-up's `cards:` block — always unsupported, and v3.2.4+ surfaces an explicit editor warning for it.
 
 ---
 **Performance notes:**
 - Pop-up content renders lazily — cards update on open, not in background. **v3.2.1+:** `background_update: true` is no longer required and may cause redundant updates — remove it from cards if added in earlier versions.
-- `cover_background: true` on media-player cards fetches album art on every state change — avoid on dashboards with many simultaneous media players.
+- `cover_background: true` on media-player cards: **the old "fetches on every state change" warning no longer holds.** The crossfade was rewritten (v3.4.0 lineage) to key on the target image — asking for the same art again does nothing, one fade runs at a time with later requests queued rather than stacked, and only the last queued request survives, so holding "next" costs one extra fade instead of one per press. A playing player emitting many updates per second no longer re-fetches. Reasonable to use on several simultaneous players; the remaining cost is image decode, not repeated fetching.
 - `auto_order: true` on HBS requires PIR sensors to work well — set `auto_order: false` if no sensors present.
 - Streamline `_javascript` keys re-evaluate on every state change — keep JS logic minimal on low-powered devices (Raspberry Pi 3/4).
 
@@ -94,13 +119,14 @@ button_action:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `hash` | string | **required** | Unique URL hash, e.g. `'#kitchen'`. Lowercase, hyphenated. |
+| `hash` | string | **required** | URL hash, e.g. `'#kitchen'`. Lowercase, hyphenated. Must be unique **within a dashboard** — registration is keyed on the dashboard path, so the same hash on two different dashboards is fine and common (`#settings` on each). |
 | `name` | string | entity name | Pop-up header title |
 | `icon` | string | entity icon | MDI icon for header |
 | `entity` | string | — | Optional entity — colours header by state |
-| `popup_style` | string | `bubble` | `bubble` or `classic` |
-| `popup_mode` | string | `default` | `default` / `fit-content` / `centered` / `adaptive-dialog` / `adaptive-dialog` |
-| `with_bottom_offset` | boolean | false | Add bottom offset — set true when HBS footer is present |
+| `popup_style` | string | `bubble` | `bubble` / `classic` / `home-assistant` (v3.4.0+). `classic` borrows HA's more-info **header**; `home-assistant` reproduces the whole dialog — geometry, surface and header. On < 3.4.0 an unknown value falls back to `bubble`, so a `home-assistant` pop-up silently looks like a Bubble one. |
+| `popup_mode` | string | `default` | `default` / `fit-content` / `centered` / `adaptive-dialog`. **With `popup_style: home-assistant` only two of them are read** — see the mode table below. |
+| `with_bottom_offset` | boolean | false | Add bottom offset — set true when an HBS footer is present. Read with `popup_mode: fit-content`, `adaptive-dialog`, **and with `popup_style: home-assistant` in any mode** (v3.4.2+), because that style is a sheet on a narrow screen whatever its mode says. |
+| `slide_to_close` | boolean / string | `true` | **v3.4.1+.** `true` — swipe down anywhere in the pop-up to close. `header` — only a swipe starting on the header closes it, so a map, a chart or a scrollable list inside the pop-up can be dragged freely. `false` — off. Ignored below v3.4.1, where the gesture is always on. |
 | `full_width_on_mobile` | boolean | false | Expand to full width on mobile (use with `centered` mode) |
 | `width_desktop` | string | `100%` | Width on desktop, e.g. `560px` |
 | `margin_top_mobile` | string | — | Top margin on mobile, e.g. `-56px` if header hidden |
@@ -153,7 +179,7 @@ button_action:
 | Option | Default | Notes |
 |--------|---------|-------|
 | `close_by_clicking_outside` | `true` | Set `false` to prevent closing when clicking the backdrop. Requires page refresh after change. |
-| `close_on_click` | `false` | Close the pop-up after ANY tap or click inside it |
+| `close_on_click` | `false` | Close the pop-up after ANY tap or click inside it. On touch, a scroll or a drag does **not** close it — movement beyond ~10 px is read as a gesture rather than a tap. Native HA buttons inside a pop-up work too (they suppress the synthetic click; Bubble Card compensates since v3.4.0). |
 | `auto_close` | — | Milliseconds until auto-close (e.g. `15000` for 15s) |
 | `slide_to_close_distance` | `400` | Pixel distance of a downward swipe to close (increase to make harder to dismiss accidentally) |
 | `background_update` | `false` | Force cards to update even when pop-up is closed. **Not recommended** — v3.2.1 does intelligent lazy updates by default. Only enable if specific cards don't refresh on open. |
@@ -190,6 +216,38 @@ trigger_close: true
 | `fit-content` | Shrinks to content height — slides up from bottom | Short pop-ups with 1–4 cards |
 | `centered` | Centered dialog — appears in the middle of the screen | Confirmations, settings, secondary views |
 | `adaptive-dialog` | Centered on desktop, bottom sheet on mobile | Mixed device usage — best of both modes |
+
+**With `popup_style: home-assistant`, the mode means something else.** That
+style carries the more-info dialog's own geometry — a sheet on a narrow screen,
+a dialog on a wide one — so it is not the mode's job to decide that any more.
+All the mode still decides is the height of that sheet, and only two values are
+read:
+
+| `popup_mode` | Sheet on mobile | Use when |
+|---|---|---|
+| `default` (or unset) | **Full height**, exactly like HA's more-info dialog — the close button and the content sit in the same place every time it opens | Room pop-ups opened one after another; anything a user reaches for repeatedly |
+| `adaptive-dialog` (or `fit-content`) | Follows its content | A pop-up with two or three cards, where a full-height sheet would be mostly empty |
+
+`centered` sets nothing here. Generating it alongside
+`popup_style: home-assistant` is not an error, it just does nothing — which is
+worse, because the YAML reads as if it did.
+
+> **This changed in v3.4.2.** Before it, the HA style was always content-height
+> and the editor disabled the mode control. An existing
+> `popup_style: home-assistant` pop-up with no `popup_mode` therefore **becomes
+> full-height on mobile** when the user updates. If they liked the old look, add
+> `popup_mode: adaptive-dialog`. Mention this when touching a dashboard that
+> already uses the HA style.
+
+> **`performance_mode: performance` behaves differently per mode.** Its content
+> deferral — building the pop-up's cards only after the slide has finished —
+> applies **only to `popup_mode: default`**. Upstream tried extending it to
+> `adaptive-dialog` and reverted: on an iPad 6 the other effects of performance
+> mode (no backdrop blur, lighter opening CSS) already gave a clean transition,
+> while deferring the content pushed the open 120 ms past the end of the slide.
+> So on the non-default modes, performance mode still helps — just not through
+> deferral. Don't pair `performance_mode` with a non-default `popup_mode`
+> expecting the deferral benefit.
 
 **empty-column card_type:**
 A blank placeholder card (`card_type: empty-column`) that fills a grid column without displaying content.
@@ -316,7 +374,7 @@ card_layout: large
 | `rows` | number | — | Height in section view rows |
 | `force_icon` | boolean | false | Prefer icon over entity picture |
 | `use_accent_color` | boolean | false | Use theme accent instead of light colour (lights only) |
-| `scrolling_effect` | boolean | true | Scroll text when it overflows |
+| `scrolling_effect` | boolean | true | Scroll (marquee) text that overflows its container. Only text that actually overflows scrolls, so leaving it on costs nothing for short labels. A running marquee holds a composited layer, but only while the element is genuinely on screen — so many scrolling labels on a long dashboard do not each pay for one. Turn it off where a label must stay still (a wall panel, per the motion-sensitivity rule in SKILL.md §2). |
 | `button_action` | object | — | `tap_action`, `double_tap_action`, `hold_action` on the card body |
 | `show_last_updated` | boolean | false | Show last updated time (counterpart to `show_last_changed`) |
 | `sub_button_justify_content` | string | — | Alignment of the sub-button row: any CSS `justify-content` value (`flex-start`, `center`, `space-between`…) |
@@ -327,12 +385,24 @@ card_layout: large
 | Option | Default | Description |
 |--------|---------|-------------|
 | `light_slider_type` | `brightness` | `brightness` / `hue` / `saturation` / `white_temp` |
-| `min_value` | — | Custom min (for non-standard entities) |
-| `max_value` | — | Custom max |
+| `min_value` | entity's own | Override. Left unset, the slider reads the entity: `min_temp` for climate, the `min` attribute otherwise, falling back to 0. |
+| `max_value` | entity's own | Override. Same chain: `max_temp` for climate, the `max` attribute otherwise, falling back to 100. |
 | `step` | — | Step increment |
 | `slider_live_update` | false | Update entity while sliding (not recommended for all) |
 | `slider_fill_orientation` | `left` | `left` / `right` / `top` / `bottom` |
 | `allow_light_slider_to_0` | false | Let slider reach 0% (turns off light) |
+> **Don't restate the entity's own range.** `min_value`, `max_value` and
+> `step` are overrides that take precedence over the entity; left unset the
+> slider reads `min_temp`/`max_temp` for climate and the `min`/`max`/`step`
+> attributes otherwise. Copying the current attribute values into the card
+> freezes them — the card keeps the old range after the entity's is changed in
+> HA. Set them only to deliberately narrow a range (a dimmer capped at 80%),
+> and say so in a comment.
+>
+> A safety clamp applies if the resulting max is not above the min: climate
+> gets min + 1, everything else min + 100. A slider that behaves oddly at a
+> pinned value is usually a min/max override colliding with the entity.
+
 | `slider_value_position` | `right` | `right` / `left` / `center` / `hidden` — where the value label sits |
 | `relative_slide` | false | Slide relative to the current value instead of jumping to the touch point. Mutually exclusive with `tap_to_slide`. |
 | `invert_slider_value` | false | Invert the displayed value (e.g. show "closed %" instead of "open %") |
@@ -443,6 +513,19 @@ visibility:
 | `template` | Jinja2 template evaluating truthy |
 | `view_columns` | Show depending on the view's column count |
 
+> **Cost note — `time` and `template` conditions in a pop-up header.** Bubble
+> Card skips re-rendering the pop-up header while nothing the header depends on
+> has moved, which it works out from the entities the conditions reference.
+> A `condition: time` or `condition: template` cannot be tracked that way, so a
+> single one on any header sub-button forces the **whole header to refresh on
+> every HA state change, anywhere in the installation**. The same applies to a
+> relative-time field (`last_changed`, `last_updated`) in the header.
+>
+> That is acceptable for one pop-up and expensive on a wall panel with a dozen.
+> Where an entity-based equivalent exists, prefer it: `condition: state` on an
+> `input_boolean` an automation flips at the time in question costs nothing at
+> rest, and the automate-first principle already points that way.
+
 **Platform conditions (v3.3.0+).** Bubble Card now also evaluates Home
 Assistant's own `domain.name` conditions client-side — the ones the native
 condition builder offers, such as `sun.is_up`, `motion.is_detected`,
@@ -526,6 +609,27 @@ sub_button:
           fill_width: false
 ```
 
+**Mixing loose sub-buttons with explicit groups changes the order.** When a
+section contains both, Bubble Card collects *all* the loose ones into a single
+automatic group and places it where the **first** of them appeared — it does
+not interleave them with the explicit groups in YAML order. So this:
+
+```yaml
+main:
+  - entity: sensor.a          # loose
+  - name: Controls            # explicit group
+    group: [...]
+  - entity: sensor.b          # loose
+```
+
+renders as `[a, b]` first, then the Controls group — not `a, Controls, b`.
+The editor does the same thing when it converts a mixed section.
+
+**If order matters, make every section explicit**: put the loose buttons into
+their own group with `buttons_layout: inline`, positioned where you want them.
+A section of only loose buttons is unaffected — they stay on one line in
+declaration order.
+
 **Sub-button JS template index order (v3.1+):**
 Bottom sub-buttons are indexed first, then main sub-buttons.
 
@@ -551,13 +655,94 @@ Bottom sub-buttons are indexed first, then main sub-buttons.
 | `show_icon` | boolean | Show icon |
 | `show_attribute` | boolean | Show attribute value |
 | `attribute` | string | Attribute to display |
-| `select_attribute` | string | Opens dropdown for this attribute list |
+| `select_attribute` | string | Opens a dropdown for this list. **Only the fourteen names in `#select-attribute` work** — any other attribute renders an empty dropdown that does nothing, with no error. |
 | `fill_width` | boolean | Fill available width (default true for bottom) |
 | `width` | string/number | Custom width (px for main, % for bottom) |
 | `custom_height` | number | Custom height in pixels |
 | `content_layout` | string | `icon-left` / `icon-top` / `icon-bottom` / `icon-right` |
 | `always_visible` | boolean | Slider only — always show expanded |
 | `visibility` | object | HA conditional visibility conditions |
+
+---
+
+## #select-attribute
+
+### `select_attribute` — the only fourteen values that work
+
+A dropdown sub-button (`sub_button_type: dropdown`) and the select card
+(`card_type: select`) both read `select_attribute`. It is **not** "any
+attribute": it is a closed list, hard-coded in
+`src/components/dropdown/lists.js`. An `input_select` or `select` entity needs
+no `select_attribute` at all — its `options` are used directly.
+
+| `select_attribute` | Domain | Service called | Since |
+|---|---|---|---|
+| `hvac_modes` | climate | `climate.set_hvac_mode` | 3.0 |
+| `fan_modes` | climate | `climate.set_fan_mode` | 3.0 |
+| `swing_modes` | climate | `climate.set_swing_mode` | 3.0 |
+| `swing_horizontal_modes` | climate | `climate.set_swing_horizontal_mode` | 3.2.2 |
+| `preset_modes` | climate, fan, humidifier… | `<domain>.set_preset_mode` | 3.0 |
+| `available_modes` | humidifier | `humidifier.set_mode` | 3.0 |
+| `operation_list` | water_heater | `water_heater.set_operation_mode` | 3.0 |
+| `effect_list` | light | `light.turn_on` with `effect` | 3.0 |
+| `source_list` | media_player | `media_player.select_source` | 3.0 |
+| `sound_mode_list` | media_player | `media_player.select_sound_mode` | 3.0 |
+| `fan_speed_list` | vacuum | `vacuum.set_fan_speed` | **3.4.2** |
+| `activity_list` | remote | `remote.turn_on` with `activity` | **3.4.2** |
+| `direction` | fan | `fan.set_direction` | **3.4.2** |
+| `alarm_modes` | alarm_control_panel | `alarm_control_panel.alarm_arm_*` / `alarm_disarm` | **3.4.2** |
+
+**The failure mode is silence.** The card reads
+`state.attributes[select_attribute]`, and only renders options if that value is
+an array. A name that is not on this list — or one that holds a number rather
+than a list — produces a dropdown that opens empty and changes nothing. No
+console error, no fallback. Two names that look right and are not:
+
+- **`percentage` on a fan.** It is a number, not a list. A fan's speed belongs
+  on a slider (`sub_button_type: slider`) or, for named speeds, on
+  `preset_modes`.
+- **`mode` on a humidifier.** The attribute holding the list is
+  `available_modes`; `mode` holds the current one.
+
+**Two of the four new names are computed, not read.** `direction` and
+`alarm_modes` are not attributes at all:
+
+- `direction` is offered only when the fan reports the `SET_DIRECTION` feature
+  (`supported_features & 4`). The two options (`forward`, `reverse`) come from
+  HA, not from the entity, so a fan that has not reported a direction yet still
+  gets the dropdown.
+- `alarm_modes` is built from the panel's `supported_features`. `disarmed` is
+  always offered; each armed mode only if its bit is set.
+
+### Alarm panels — the keypad path
+
+With `select_attribute: alarm_modes` the code prompt is handled for you, but
+along three different routes depending on the installation:
+
+| Situation | What happens |
+|---|---|
+| Panel has no `code_format` | Mode changes immediately |
+| `code_arm_required: false`, arming | Arms immediately; disarming still asks |
+| A default code is stored on the entity (Settings → entity → alarm options) | HA sends it; no prompt |
+| `code_format: number`, HA frontend 2026.3+ | A 12-key keypad replaces the dropdown's options **inside the menu**; a wrong code shakes the dots and clears |
+| `code_format: text` (letters), or HA frontend < 2026.3 | The more-info dialog opens instead — the menu has no room for a text field |
+
+So on HA below 2026.3 the gesture leaves the card. Don't promise an in-card
+keypad without checking the frontend version.
+
+```yaml
+# Arm/disarm from a sub-button — v3.4.2+, HA 2026.3+ for the in-menu keypad
+type: custom:bubble-card
+card_type: button
+button_type: name
+entity: alarm_control_panel.home
+name: Alarm
+sub_button:
+  - entity: alarm_control_panel.home
+    sub_button_type: dropdown
+    select_attribute: alarm_modes
+    show_background: true
+```
 
 ---
 
@@ -717,14 +902,24 @@ case and hides the colour bar entirely.)
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `days` | — | Number of days to look ahead |
+| `days` | — | Number of days to look ahead. **v3.4.2+: this also sets the live-subscription window** — see the note below. |
 | `limit` | — | Maximum number of events shown |
 | `show_end` | false | Show event end time |
 | `show_progress` | false | Progress bar on events currently running |
 | `show_place` | false | Show the event location |
 | `show_started_events` | false | Keep events that have already started in the list |
 | `scrolling_effect` | true | Scroll long event titles |
-| `event_action` | — | `tap_action` applied to individual events (defaults to `none`) |
+| `event_action` | — | `tap_action` / `double_tap_action` / `hold_action` applied to individual events. **Default changed in v3.4.2: `tap_action` is now `more-info`** (it was `none`), and that `more-info` opens **HA's event dialog** with the event's description and location — not the calendar entity's more-info, which only knows the next event. Leave it unset for v3.4.2+. To keep events inert, set `tap_action: {action: none}` explicitly. |
+
+> **The calendar card updates live from v3.4.2.** It now subscribes to the
+> event list over the WebSocket, not just to the entity's state. Before that,
+> only a change to the *next* event refreshed the card, so an event edited or
+> deleted further out stayed wrong until a reload — the usual complaint being a
+> wall panel showing a cancelled appointment all day. The subscription window
+> runs from local midnight across `days`, which is the same window HA's own
+> calendar card uses, so several cards asking for the same range share one
+> server fetch. Keep `days` as small as the view needs: a 30-day card is a
+> 30-day subscription.
 
 ---
 
@@ -780,10 +975,40 @@ sub_button:
 | `sub_button_type` | `default` | `default` / `slider` / `dropdown` |
 | `content_layout` | `icon-left` | Icon/label arrangement inside the button |
 | `always_visible` | false | Keep a slider sub-button expanded rather than tap-to-open |
-| `show_button_info` | false | Show the value alongside a slider. Forces `slider_value_position: right`. |
+| `show_button_info` | false | Show the value alongside a slider. Forces `slider_value_position: right` — but only when combined with `always_visible: true`; on a tap-to-open slider the configured position still applies. |
 | `hide_when_parent_unavailable` | false | Hide this sub-button when the card's main entity is unavailable |
 | `light_background` | true | Tint the background from the light's colour |
 | `css_class` | — | Adds a custom class to the element, for targeting from `styles:` or a module. Prefer this over brittle `nth-child` selectors. |
+| `scrolling_effect` | card's, else `true` | Per-sub-button override. Unset, it inherits the card's `scrolling_effect`; unset there too, scrolling is on. |
+
+> **Slider sub-buttons do not inherit the card's slider settings.** Every
+> slider option — `tap_to_slide`, `relative_slide`, `read_only_slider`,
+> `slider_live_update`, `invert_slider_value`, `slider_fill_orientation`,
+> `slider_value_position`, `use_accent_color`, `min_value` / `max_value` /
+> `step`, the light and cover options — is read from the **sub-button** only.
+> Setting them on the card has no effect on a `sub_button_type: slider`.
+>
+> This is not the same rule as `scrolling_effect`, which *does* fall back to
+> the card. The cascade is per-option, so don't assume either direction: set
+> slider options on each slider sub-button that needs them.
+>
+> An unset option is genuinely absent rather than defaulted, which is what lets
+> direction-aware defaults apply — `slider_value_position` follows the
+> document's reading direction in RTL languages when left unset, and pinning it
+> to `right` breaks that.
+
+**Entity pictures on sub-buttons.** A sub-button pointing at an entity with an
+`entity_picture` (a `person`, a media player with artwork) shows that picture
+instead of an icon. Two things suppress it: `force_icon: true`, or setting the
+sub-button's own `icon`. The *card's* icon does not — only the sub-button's.
+So a person sub-button that should show a face needs no `icon:` at all, and
+one that should show an icon needs its own `icon:` rather than `force_icon` on
+the card.
+
+**Timer entities tick live.** A sub-button on a `timer` whose state line
+includes `state` or `remaining_time` counts down on its own beat while the
+timer is `active` — the entity itself does not update every second. Nothing to
+configure; it follows from the state line.
 
 **Layout options for the sub-buttons card:**
 
@@ -792,7 +1017,7 @@ sub_button:
 | `hide_main_background` | false | Transparent card — the chip-bar look |
 | `footer_mode` | false | Pin the card to the bottom of the viewport |
 | `footer_full_width` | false | Footer spans the full width |
-| `footer_width` | — | Fixed footer width in px. Ignored when `footer_full_width: true` |
+| `footer_width` | — | Fixed footer width in px. Ignored when `footer_full_width: true`. **Changed in v3.4.2:** below 600 px viewport width the footer used to be forced to full width, throwing a configured width away — so the same 300 px footer obeyed the setting in landscape and ignored it in portrait (#2620). It is now clamped instead, to `min(footer_width, content width − 16px)`, so a width that fits is honoured at every viewport. A footer with **no** `footer_width` still fills a narrow screen, as before. If a dashboard carried a `styles:` or theme workaround to keep a narrow footer narrow on phones, remove it on v3.4.2+. |
 | `footer_bottom_offset` | `16` | Distance from the bottom edge in px |
 | `menu_style` | false | Menu-style rendering of the button row |
 | `labels_below` | false | Labels under the icons — only effective with `menu_style: true` |
@@ -802,6 +1027,167 @@ sub_button:
 
 `labels_below` silently does nothing without `menu_style: true` — if a user
 reports labels not moving, check that pairing first.
+
+---
+
+## #state-content
+
+### `state_content` — what the state line shows (v3.4.0+)
+
+Since v3.4.0 the state line of a card or sub-button is described by a single
+ordered list, written the way Home Assistant writes it on its tile card and
+badges. It replaces five separate options.
+
+```yaml
+type: custom:bubble-card
+card_type: button
+entity: climate.living_room
+state_content:
+  - state
+  - current_temperature
+```
+
+A single value may be given as a string (`state_content: state`). Items are
+`state`, an attribute name, `last_changed`, `last_updated`, `last_triggered`,
+or a Home Assistant template. `last-changed` and `last-updated` are accepted
+as aliases.
+
+**Replaces:**
+
+| Legacy key | `state_content` equivalent |
+|---|---|
+| `show_state: true` | `- state` |
+| `show_attribute: true` + `attribute: brightness` | `- brightness` |
+| `show_last_changed: true` | `- last_changed` |
+| `show_last_updated: true` | `- last_updated` |
+| all off | `state_content: []` |
+
+**Domain defaults when nothing is asked for** (same table as the HA frontend):
+
+```
+climate    → state, current_temperature      light  → brightness
+cover      → state, current_position         timer  → remaining_time
+fan        → percentage                      update → install_status
+humidifier → state, current_humidity         valve  → state, current_position
+```
+
+Attributes that read zero are left out for `light`, `fan`, `cover` and
+`valve`, so an off light shows *Off* rather than *0 %*.
+
+**Version handling.** The five legacy keys still work — they are read into the
+same list. But the moment a user opens that card in the visual editor, Bubble
+Card migrates them to `state_content` on save. So:
+
+- Target v3.4.0+ → generate `state_content`.
+- Target an unknown or older version → generate the legacy keys and say that
+  v3.4.0 will rewrite them the first time the card is edited in the UI. That
+  rewrite is lossless, not something to warn against.
+- Never generate both for the same card: `state_content` wins outright, and
+  the legacy keys are then dead config that misleads the next reader.
+
+---
+
+### Render performance in v3.4.0
+
+Home Assistant replaces the whole `hass` object whenever any entity changes,
+so every card is asked to render on every state change anywhere in the
+installation. Bubble Card v3.4.0 measured 43 renders per second at rest on an
+A10 iPad, 78% of them with nothing the card depends on having moved, and added
+a render gate that observes each card's actual dependency set to skip those.
+Deferred card updates and lazy editor previews were added alongside.
+
+**What this means for generation:** nothing to set — it is automatic. But it
+does change the advice around `performance_mode` on pop-ups: that option
+remains available for very heavy pop-ups, and is now less often the thing that
+was actually needed. On v3.4.0+, update first and measure before reaching for
+it.
+
+**v3.4.2 rebuilt the gate's comparison, and that matters for one symptom.**
+v3.4.0 compared a fixed list of `hass` keys (`themes`, `locale`, `config`,
+`user`, `language`, `entities`, `devices`, `areas`). A list has to be kept
+complete, and it was not: HA replaces its *formatters* once translations and
+registries have loaded, and those were not on the list, so a card could render
+its state line before the formatters arrived and show a **raw state** —
+`heat_cool` instead of "Heat/Cool", a number without its unit — until
+something else made it render again. v3.4.2 compares identity across
+everything outside `states` instead of listing it, and adds a **10-second
+settle window** after HA connects or reconnects in which no render is skipped
+at all. Upstream measured the cost of that window at 50–70 ms of extra
+rendering on a 31-card dashboard under a 4× CPU throttle.
+
+So: a card showing an unformatted state for a moment on load, or a wall panel
+showing one after reconnecting, is a known v3.4.0/3.4.1 defect — the fix is to
+update, not to add a template.
+
+---
+
+## #ha-templates
+
+### Home Assistant templates in card config (v3.4.0+)
+
+Bubble Card has always supported JavaScript `${ }` templates inside `styles:`.
+Since v3.4.0 it also evaluates **Home Assistant (Jinja2) templates** — the
+`{{ }}` and `{% %}` syntax from Developer Tools → Template — in a set of
+text fields:
+
+- card `name` and `icon`
+- sub-button `name`
+- items inside `state_content`
+- `styles:`, where a block may mix Jinja and `${ }` templates
+
+```yaml
+type: custom:bubble-card
+card_type: button
+entity: light.kitchen
+name: "{{ state_attr('light.kitchen','friendly_name') }}"
+icon: "{{ 'mdi:lightbulb' if is_state('light.kitchen','on') else 'mdi:lightbulb-outline' }}"
+```
+
+**When to reach for this, and when not to.** A Jinja template in `name:` is
+evaluated by Home Assistant on every relevant state change. That is cheap for
+one card and not cheap for forty. Prefer it where the value genuinely varies;
+for a static label, write the label.
+
+**It does not change this skill's scope rule.** Template *sensors* remain an
+`ha-yaml` handoff. This is presentation-layer templating on a value the
+dashboard already has, not a new entity.
+
+**The Iron Law still applies.** A template that returns a colour must return a
+theme variable, not a hex literal.
+
+**A templated `name:` has no fallback.** Where a plain `name:` falls back to
+the entity's friendly name when absent, a template shows exactly what it
+returns — the empty string included. A template that can evaluate to nothing
+(an attribute that is missing while the entity is `unavailable`, say) leaves
+the card blank rather than showing the friendly name. Give it a default:
+
+```yaml
+name: "{{ state_attr('sensor.x','label') or 'Sensor' }}"
+```
+
+Rendered template output is HTML-escaped where the name is written as markup,
+so it is treated as entity data rather than author-supplied markup.
+
+**`icon:` behaves the opposite way.** A template that renders nothing — or has
+not rendered yet — falls through to the entity's own icon, exactly as an absent
+`icon:` would. So a conditional icon template is safe without a default, while
+a conditional name template is not.
+
+**Usually don't set `icon:` at all.** Bubble Card follows Home Assistant's own
+resolution chain: a configured icon first, then the icon set on the entity in
+the HA UI, then platform icons, domain state icons (so a lock shows open or
+closed), `device_class` icons, and finally the domain fallback. Setting
+`icon:` overrides all of that — including the state-dependent icons a user
+would expect. Set it only where the entity genuinely has no sensible icon, or
+where the card must differ from the entity on purpose.
+
+A templated `name:` or `icon:` is also resolved for Home Assistant's own
+navigation picker, so a pop-up shows up there with what it displays rather
+than with the raw template text.
+
+**Version-gate it.** On Bubble Card < 3.4.0 a Jinja template in `name:` is not
+evaluated — the user sees the raw `{{ … }}` text on the card. Only generate
+these when the user is on v3.4.0+.
 
 ---
 
@@ -885,6 +1271,39 @@ styles: |
 > template sensor is no longer automatically the faster choice, so don't
 > justify one on performance grounds alone.
 
+**Names in scope inside a `styles:` template** (verified against the v3.4.0
+compiler):
+
+| Name | What it is |
+|------|-----------|
+| `hass` | The HA object. Reading an entity through it registers the card's dependency with the render gate (v3.4.0). |
+| `entity` | The card's `entity` id |
+| `state` | That entity's state |
+| `icon` | The card's icon element |
+| `subButtonState` | Array of sub-button states |
+| `subButtonIcon` | Array of sub-button icon elements |
+| `card` | The card element |
+| `name` | The card's name |
+| `getWeatherIcon` | Weather-icon helper |
+| `checkConditionsMet` | Evaluates a condition list |
+| `onTeardown` / `hasChanged` | Module helpers, v3.3.0+ |
+| `renderTemplate(template, entity?)` | **v3.4.0+** — renders a Home Assistant (Jinja2) template from inside a JS template and returns its text. `entity` defaults to the card's entity. |
+
+`renderTemplate` is what lets one `styles:` block mix both template systems:
+
+```yaml
+styles: |
+  .bubble-name { content: "${renderTemplate('{{ states("sensor.outside") }}')}"; }
+```
+
+Reaching for it is rarely necessary — since v3.4.0 a Jinja template can go
+directly in `name:`, `icon:` or `state_content` (`#ha-templates`). Use
+`renderTemplate` only when the value must feed a CSS declaration.
+
+Referencing a name the installed version does not provide throws, and Bubble
+Card then skips the **whole** template — guard `renderTemplate` with `typeof`
+in anything shared.
+
 JS templates go in the `styles:` key. CSS property assignments run first;
 DOM-modifying statements must come last.
 
@@ -896,7 +1315,25 @@ DOM-modifying statements must come last.
 | `entity` | string | Entity ID string (e.g. `light.kitchen`) |
 | `icon` | element | The main icon element — use `icon.setAttribute("icon", "mdi:...")` |
 | `subButtonIcon[N]` | element | Sub-button icon — N starts at 0 for first bottom sub-button (v3.1+) |
-| `subButtonState[N]` | string | State of Nth sub-button entity |
+| `subButtonState[N]` | string | State of the Nth sub-button's entity. **Reliable only from v3.4.2** — see below. |
+
+> **`subButtonState[N]` was mis-indexed before v3.4.2.** The walk read the
+> ungrouped `main` sub-buttons, then every group, and **never read the
+> ungrouped `bottom` ones at all** (#2165). So on v3.1–v3.4.1, as soon as a
+> card mixes groups with loose sub-buttons, `subButtonState[N]` points at a
+> different button than `subButtonIcon[N]` does, and some buttons have no
+> index. From v3.4.2 the walk goes section by section — `main`, then `bottom`
+> — and in config order inside each, so the index matches what the card shows,
+> which is what `subButtonIcon[]` always did.
+>
+> On a `card_type: sub-buttons` card only the `bottom` section counts: the
+> editor refuses to write a `main` section there, so a leftover one in
+> hand-written YAML is not on screen and has no index.
+>
+> **When generating for < 3.4.2, don't index `subButtonState[]` on a card that
+> mixes groups and loose sub-buttons.** Read the entity through `hass` instead
+> — `hass.states['light.kitchen'].state` — which is unambiguous at every
+> version and also registers the dependency with the render gate.
 | `card` | element | The card DOM element |
 | `hass` | object | Full HA state object |
 | `this` | object | Card config and context |
@@ -937,6 +1374,103 @@ styles: |
 **Critical rule:** DOM-modifying statements (`setAttribute`, `.innerText =`)
 must always be placed after all CSS property assignments in the `styles:` block.
 Mixing order causes the CSS to be treated as JS and breaks both.
+
+---
+
+## #css-selectors
+
+### Targeting elements from `styles:`
+
+The skill's examples cover the dozen selectors that matter most. Bubble Card
+renders around 110 card-facing `.bubble-*` classes in total; the useful ones,
+grouped by where they appear:
+
+**Every card**
+
+```
+.bubble-container            .bubble-content-container
+.bubble-icon  .bubble-main-icon   .bubble-name  .bubble-name-container
+.bubble-state  .bubble-background  .bubble-background-color
+.bubble-button-card  .bubble-button-card-container  .bubble-button-container
+.bubble-entity-picture  .bubble-badge
+```
+
+**Sub-buttons**
+
+```
+.bubble-sub-button  .bubble-sub-button-container  .bubble-sub-button-group
+.bubble-sub-button-icon  .bubble-sub-button-name-container
+.bubble-sub-button-image  .bubble-sub-button-info-wrapper
+.bubble-sub-button-alignment-lane
+```
+
+**Sliders**
+
+```
+.bubble-range-slider  .bubble-range-fill  .bubble-range-value
+.bubble-slider-dragging      (added while the user is dragging)
+.bubble-sub-slider-wrapper   .bubble-sub-slider-close
+.bubble-color-track  .bubble-color-cursor  .bubble-color-background
+```
+
+**Pop-up**
+
+```
+.bubble-pop-up-container  .bubble-header  .bubble-header-container
+.bubble-header-actions  .bubble-header-action-button  .bubble-header-action-icon
+.bubble-close-button  .bubble-previous-button  .bubble-title
+.bubble-scroll-separator
+```
+
+**Climate** — `.bubble-climate-plus-button`, `.bubble-climate-minus-button`
+(+ `-icon`), `.bubble-climate-temp-display`,
+`.bubble-target-temperature-container`, `.bubble-temperature-container`,
+`.bubble-high-temp-container`, `.bubble-low-temp-container`
+
+**Cover** — `.bubble-cover-button` (+ `-icon`), `.bubble-cover-background`,
+`.bubble-tilt-buttons-container`, and the crossfade layers
+(`.bubble-cover-crossfade-layer`, `.bubble-cover-icon-crossfade`)
+
+**Media player** — `.bubble-media-button` (+ `-icon`),
+`.bubble-play-pause-button`, `.bubble-next-button`, `.bubble-previous-button`,
+`.bubble-mute-button`, `.bubble-volume-button`, `.bubble-volume-slider`
+(+ `-wrapper`, `-mute-button`, `-close-button`), `.bubble-artist`,
+`.bubble-media-info-container`
+
+**Calendar** — `.bubble-event` (+ `-name`, `-time`, `-place`, `-color`),
+`.bubble-day-wrapper`, `.bubble-day-number`, `.bubble-day-month`,
+`.bubble-day-chip`, `.bubble-day-events`
+
+**Select / dropdown** — `.bubble-dropdown-container`,
+`.bubble-dropdown-select`, `.bubble-dropdown-arrow`,
+`.bubble-select-card-container`
+
+**HBS** — `.bubble-buttons-container`, `.bubble-buttons-column-wrapper`,
+`.bubble-horizontal-buttons-stack-card-container`
+
+> **These are internal class names, not a stable API.** They change between
+> versions without notice — the `bubble-cover-crossfade-*` set, for example,
+> did not exist in earlier 3.x releases. Two consequences:
+>
+> 1. Prefer a **`--bubble-*` theme variable** where one exists
+>    (`css-theme-ref.md#bubble-vars`) — that *is* the supported surface.
+> 2. When you must target an element, use **`css_class`** on the sub-button
+>    (v3.3.0+, `#sub-buttons`) to add your own class rather than depending on
+>    Bubble Card's. `nth-child` selectors are worse still: they break when a
+>    sub-button is added or hidden by a condition.
+
+**Every sub-button carries three classes, and only one of them is stable:**
+
+| Class | Stability |
+|---|---|
+| `.bubble-sub-button` | always present |
+| `.bubble-sub-button-<index>` | the sub-button's key, with `_` rewritten to `-` (so `main_1` → `.bubble-sub-button-main-1`). Stable while the key is |
+| a class from `name:` | derived from the name — lowercased, accents stripped, everything non-alphanumeric collapsed to hyphens, so `Küche Licht` → `.kuche-licht`. **Breaks on a rename, and on a translated name.** Not generated at all for a templated `name:`. |
+| `.<css_class>` | normalised the same way, but set deliberately — survives renames, translations and templated names |
+
+So: target `css_class` when you control the YAML, the index class when you do
+not, and never the name-derived class in anything shared. A user who translates
+their dashboard loses every style hung on a name.
 
 ---
 
@@ -1002,9 +1536,15 @@ https://github.com/Clooos/Bubble-Card/discussions/categories/share-your-custom-s
 
 ### Tap, hold, double-tap actions
 
+Bubble Card dispatches a `hass-action` event, so the action set is **Home
+Assistant's own**, not a Bubble-specific list — anything HA's action handler
+accepts works here.
+
 ```yaml
 tap_action:
-  action: toggle | more-info | navigate | call-service | url | fire-dom-event | none
+  action: toggle | more-info | navigate | perform-action | url | assist |
+          fire-dom-event | none
+  # call-service is the pre-2024.8 name for perform-action and still works
 
 # Navigate to a pop-up
 tap_action:
@@ -1024,10 +1564,46 @@ tap_action:
 tap_action:
   action: url
   url_path: 'https://example.com'
+
+# Open the Assist dialog
+tap_action:
+  action: assist
+  pipeline_id: last_used          # optional
+  start_listening: true           # optional
 ```
 
-**Note:** When `double_tap_action` is set, `tap_action` has a 200 ms delay.
-Set `double_tap_action: action: none` to disable and restore instant tap response.
+**`perform-action` vs `call-service`.** HA renamed the action in 2024.8;
+Bubble Card accepts both (`service:` and `perform_action:` are read as
+equivalents). Generate `perform-action` for current setups — `call-service`
+is legacy and will read as dated to anyone comparing against HA's own docs.
+
+```yaml
+tap_action:
+  action: perform-action
+  perform_action: light.turn_on
+  target:
+    entity_id: light.kitchen
+  data:
+    brightness_pct: 100
+```
+
+**Note:** When `double_tap_action` is set, `tap_action` has a 200 ms delay
+(verified against the source). Set `double_tap_action: action: none` to disable
+and restore instant tap response. A hold fires after **500 ms**.
+
+**`tap_action: none` also removes the ripple.** Bubble Card attaches the
+press feedback only when at least one of tap, double-tap or hold is something
+other than `none`. A card with all three set to `none` gets no ripple and no
+`bubble-action-enabled` class — so it *looks* non-interactive, not just
+behaves that way. This is why the Overview view's state-only cards take
+`tap_action: none` rather than being left at their default: it is the
+difference between a card that ignores a tap and a card that never invited
+one.
+
+A tap is cancelled by movement, and a hold survives a little more of it than a
+tap does — so a press that drifts during a scroll does not fire, and a hold
+does not break on a small tremor. Nothing to configure; worth knowing when a
+user reports that taps "sometimes don't register" on a scrolling dashboard.
 
 ---
 
@@ -1051,13 +1627,14 @@ specified what card type to use. Always verify with `#version-compat` first.
 | `media_player` | `media-player` | — |
 | `input_select` | `select` | — |
 | `select` | `select` | — |
-| `fan` | `button` | `switch` for on/off; add sub-button with `select_attribute: percentage` for speed |
-| `vacuum` | `button` | `switch` for start/stop; add sub-button for `status` attribute display |
-| `alarm_control_panel` | `button` | `state` display; tap_action: `more-info` for arming UI |
+| `fan` | `button` | `switch` for on/off. Speed: a **slider** sub-button for `percentage` (it is a number, not a list — `select_attribute: percentage` renders an empty dropdown), or `select_attribute: preset_modes` for named speeds. `select_attribute: direction` on a reversible fan needs v3.4.2+. |
+| `vacuum` | `button` | `switch` for start/stop; add sub-button for `status` attribute display. Suction power: `select_attribute: fan_speed_list` (v3.4.2+). Battery: point at the device's battery **sensor** — HA 2026.8 removed the `battery_level` attribute. |
+| `alarm_control_panel` | `button` | `state` display. v3.4.2+: `select_attribute: alarm_modes` on a dropdown sub-button arms and disarms in place, with a keypad when a code is needed — see `#select-attribute`. Below that, `tap_action: more-info` for the arming UI. |
 | `lock` | `button` | `switch` (toggles lock/unlock); always add `hold_action: more-info` |
 | `camera` | `button` | `state` with `camera_image` entity_picture; use pop-up with `centered` mode for full view. **Note: use `picture-entity` (native HA card) for live streams — Bubble Card does not support camera live video directly.** |
-| `humidifier` | `button` | `switch` for on/off; add sub-button `select_attribute: mode` |
-| `number` | `button` | `slider` with `min_value` / `max_value` / `step` matching entity |
+| `humidifier` | `button` | `switch` for on/off; add sub-button `select_attribute: available_modes` (**not** `mode` — that attribute holds the current value, not the list) |
+| `remote` | `button` | `switch` for on/off; `select_attribute: activity_list` to pick an activity (v3.4.2+) |
+| `number` | `button` | `slider` — leave `min_value` / `max_value` / `step` unset so the slider follows the entity's own `min` / `max` / `step` attributes |
 | `input_number` | `button` | `slider` same as `number` |
 | `timer` | `button` | `state` showing remaining time; `button_type: switch` starts/cancels |
 | `counter` | `button` | `state` showing count value |
@@ -1076,7 +1653,7 @@ specified what card type to use. Always verify with `#version-compat` first.
 | `remote` | `button` | `switch` — toggle domain |
 | `lawn_mower` | `button` | `switch` — a toggle domain in Bubble Card, with a built-in `mdi:robot-mower` icon. Add a sub-button on the `activity` attribute for status. |
 | `valve` | native tile | **No Bubble Card support.** Not a recognised toggle or slider domain. Use the native HA tile card, or a `button` with an explicit `tap_action: call-service` on `valve.open_valve` / `valve.close_valve`. |
-| `water_heater` | native tile | **No Bubble Card support** (unlike `climate`). Use the native tile card with its temperature feature, or `button` + `more-info`. |
+| `water_heater` | `button` (state) | **Partial support — corrected.** Not a toggle or slider domain, so `button_type: switch` will not switch it and there is no `card_type: climate` equivalent. But Bubble Card *does* understand its active state: a water heater has no `on`, its state is the operation it is running, so anything other than `off`/`unknown`/`unavailable` reads as active (same rule HA uses). A `button_type: state` card therefore shows and colours correctly. For setting a temperature, use the native tile card with its temperature feature, or `more-info`. |
 | `todo` | native card | **No Bubble Card support.** Use the native todo-list card; a Bubble `button` can navigate to it. |
 | `image` | native card | Use the native `picture-entity` / `image` card, same reasoning as `camera`. |
 
@@ -1085,15 +1662,20 @@ toggle and slider domains internally (verified in v3.2.5 source): toggle =
 `light`, `switch`, `fan`, `input_boolean`, `lock`, `siren`, `remote`,
 `humidifier`, `vacuum`, `lawn_mower`, `script`, `scene`, `automation`,
 `cover`, `climate`, `media_player`; slider = `light`, `media_player`,
-`cover`, `input_number`, `number`, `climate`, `fan`. A domain outside these
-lists still renders as a card, but `button_type: switch` or `slider` will not
-behave as expected — fall back to an explicit `tap_action` or the native
+`cover`, `input_number`, `number`, `climate`, `fan`. These lists govern *control*, not display: a domain outside them can still
+render a correct `button_type: state` card, because active-state detection is
+a separate and broader rule (numeric states, `open`, `playing`, `locked`,
+`cleaning` and others all read as active, and `water_heater` has its own).
+What a domain outside these lists cannot do is toggle or slide — `button_type:
+switch` or `slider` will not behave as expected — fall back to an explicit `tap_action` or the native
 tile, and say so rather than generating a control that silently does nothing.
 
 ### Sub-button patterns for complex domains
 
 ```yaml
-# Fan — on/off switch + speed selector sub-button
+# Fan — on/off switch + speed slider sub-button
+# `percentage` is a number, so it belongs on a slider. A dropdown would need a
+# list, and `select_attribute: percentage` opens empty (see #select-attribute).
 type: custom:bubble-card
 card_type: button
 button_type: switch
@@ -1103,8 +1685,7 @@ card_layout: large
 sub_button:
   main:
     - name: Speed
-      select_attribute: percentage
-      show_arrow: false
+      sub_button_type: slider
       show_state: true
       show_background: false
 
