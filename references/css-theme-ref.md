@@ -73,6 +73,148 @@ in both light and dark mode via the HA variables they point to.
 | `--bubble-select-list-background-color` | `var(--card-background-color)` | Dropdown list surface |
 | `--bubble-list-item-accent-color` | `none` | Selected list item — no tint by default |
 
+### Per-component variables — the full catalogue
+
+The 15 mappings above are what the Casa5HeyneV2 theme sets, and they are
+enough for almost every dashboard: they drive colour and radius everywhere
+through the HA variables they point at. Bubble Card exposes a further 63
+component-level knobs for cases where one component must differ from the rest.
+
+**Use these sparingly.** Setting one breaks the "one accent lever moves
+everything" property that makes this theme maintainable. Reach for them only
+when the user asks for something a global mapping genuinely cannot express —
+and still set them in the theme, never on the card (the Iron Law is unchanged).
+
+All of them accept the same values as the globals above, so a theme variable
+belongs on the right-hand side, not a hex literal.
+
+**Climate HVAC mode colours** — the most commonly asked-for group, since HA's
+own climate colours do not reach Bubble Card:
+
+```
+--bubble-state-climate-heat-color        --bubble-state-climate-cool-color
+--bubble-state-climate-auto-color        --bubble-state-climate-dry-color
+--bubble-state-climate-heat-cool-color   --bubble-state-climate-fan-only-color
+--bubble-state-humidifier-on-color
+--bubble-climate-accent-color            --bubble-climate-background-color
+```
+
+**Button and icon**
+
+```
+--bubble-button-main-background-color    --bubble-button-background-color
+--bubble-button-icon-background-color    --bubble-button-icon-border-radius
+--bubble-button-active-icon-color        --bubble-icon-color
+--bubble-main-buttons-background-color   --bubble-light-color
+--bubble-light-white-color               --bubble-line-background-color
+```
+
+**Generic per-card-type overrides** — apply to whichever card type they are
+scoped to:
+
+```
+--bubble-card-type-main-background-color --bubble-card-type-icon-background-color
+--bubble-card-type-border                --bubble-card-type-border-radius
+--bubble-card-type-box-shadow            --bubble-card-type-icon-border-radius
+```
+
+**Pop-up**
+
+```
+--bubble-pop-up-content-border-radius    --bubble-pop-up-gap
+--bubble-pop-up-header-gap               --bubble-pop-up-header-overlap
+--bubble-pop-up-bottom-padding           --bubble-pop-up-visible-bottom-padding
+--bubble-pop-up-extra-bottom-space       --bubble-pop-up-close-button-border
+--bubble-pop-up-home-assistant-icon-display
+--bubble-backdrop-filter
+```
+
+**Sub-buttons and sliders**
+
+```
+--bubble-sub-button-dark-text-color      --bubble-sub-button-light-text-color
+--bubble-sub-button-highlight-font-size  --bubble-sub-button-highlight-font-weight
+--bubble-sub-slider-background-color     --bubble-sub-slider-border-radius
+```
+
+> **The two text-colour variables changed meaning in v3.4.1.** Bubble Card used
+> to pick a dark icon and label on a light sub-button background by a luminance
+> threshold. It now measures **WCAG contrast** against the colour the surface
+> actually paints, and against the theme's own text colour, so the choice holds
+> on a light theme as well. Two consequences:
+>
+> - `--bubble-sub-button-light-text-color` is new (default `#ffffff`). It is
+>   applied as `.dark-background` — a light label on a dark surface under a
+>   light theme, where the theme's dark text would be swallowed by a navy, a
+>   violet or a deep red.
+> - `--bubble-sub-button-dark-text-color` still drives `.bright-background`, but
+>   its default softened from `rgb(0, 0, 0)` to `rgba(0, 0, 0, 0.65)`. A theme
+>   that set it to pure black now looks harsher than the card's own default.
+>   Prefer leaving it unset.
+>
+> A class is only applied where the better-contrasting tone is **not** the
+> theme's own text, so most sub-buttons keep the theme's text and neither
+> variable is in play. The practical rule: **do not hand-write a `styles:`
+> override to force icon contrast on a light sub-button** on v3.4.1+ — the card
+> already decided, and the override fights a correct answer.
+
+**Select / dropdown**
+
+```
+--bubble-select-main-background-color    --bubble-select-border
+--bubble-select-button-border-radius     --bubble-select-list-border-radius
+--bubble-select-list-item-accent-color   --bubble-select-list-width
+--bubble-select-arrow-background-color
+```
+
+**Media player**
+
+```
+--bubble-media-player-border-radius      --bubble-media-player-buttons-border-radius
+--bubble-media-player-play-pause-icon-color
+--bubble-media-player-slider-background-color
+```
+
+**Cover, calendar, HBS, layout**
+
+```
+--bubble-cover-buttons-border-radius     --bubble-calendar-border-radius
+--bubble-event-accent-color              --bubble-footer-box-shadow
+--bubble-horizontal-buttons-stack-background-color
+--bubble-horizontal-buttons-stack-border-radius
+--bubble-content-inline-start
+```
+
+**Colour-picker cursor** (light cards with a colour wheel) — seven variables
+named `--bubble-color-cursor-*` controlling the indicator's background,
+opacity and gradient stops. Rarely worth touching.
+
+> **Variables Bubble Card computes and sets itself at runtime are not in this
+> list** — pop-up available height, scroll-lock size, mask stops. Setting them
+> in a theme has no effect, because the card overwrites them. Two names invite
+> the mistake:
+>
+> - `--bubble-footer-width` **is** themeable — it is the knob, and the
+>   `footer_width` option writes it. `--bubble-footer-resolved-width` (v3.4.2)
+>   is the clamped result the stylesheet derives from it; setting that one does
+>   nothing useful.
+> - `--bubble-keypad-key-size` (v3.4.2, the alarm keypad) is declared *on the
+>   keypad element* at `52px`, not read with a theme fallback, so a theme cannot
+>   reach it. Resize it with a `styles:` rule targeting `.bubble-keypad` if a
+>   wall panel needs bigger keys.
+>
+> `--bubble-content-inline-start` is a special case worth knowing. It is where
+> the dashboard content starts, and the chain is
+> `var(--bubble-content-inline-start, var(--ha-sidebar-width, 0px))`. **On HA
+> 2026.6+ Bubble Card no longer measures it** — HA publishes
+> `--ha-sidebar-width` itself, so nothing overwrites a theme value and setting
+> it in a theme does work. Below 2026.6 Bubble Card measures the rendered panel
+> and overwrites it. Only reach for it when a kiosk or wall-panel mod leaves
+> fixed-position cards (pop-ups, footer, HBS) off-centre; see
+> `dashboard-system.md#wall-panel-hardening`.
+
+---
+
 ### Structural HA card variables (mode-independent)
 
 These shape geometry and are not colour-sensitive:

@@ -65,6 +65,8 @@ jobs:
                    --exclude '__pycache__' --exclude '.DS_Store' \
                    --exclude 'scripts' \
                    --exclude 'CHANGELOG-v*-detail.md' \
+                   --exclude 'CODE-REVIEW-LOG.md' \
+                   --exclude 'EVAL-SCORESHEET.md' \
                    --exclude 'RELEASE_NOTES_v*.md' \
                    ./ dist/HA_Bubble_Skill/
           cd dist

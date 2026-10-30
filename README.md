@@ -47,7 +47,7 @@ ha-bubble-dashboard/
 │   ├── colour-intelligence-ref.md      ← palette recipes, WCAG checks, advisory flow
 │   ├── css-theme-ref.md                ← full HA/Bubble var() chain catalogue
 │   ├── graphs-ref.md                   ← graph card decision guide, SGCC, Advanced History panel
-│   ├── eval-set.md                     ← behavioural regression tests (10 prompts + criteria)
+│   ├── eval-set.md                     ← behavioural regression tests (21 prompts + criteria)
 │   ├── dashboard-system.md             ← 5-view architecture, workflow, native-first check, device profiles, masonry migration, wall-panel hardening, view scaffolds
 │   ├── health-check-ref.md             ← YAML audit: parse steps, finding categories, output format
 │   ├── module-authoring-ref.md         ← Bubble Card module editor: field catalog, object selector, sharing format
@@ -81,22 +81,23 @@ they will never run.
 
 ```bash
 python3 scripts/verify.py        # exit 0 = clean
-python3 scripts/test_verify.py   # 11/11 guards working
+python3 scripts/test_verify.py   # 13/13 guards working
 ```
 
-`verify.py` runs twelve structural checks: anchor integrity, SKILL.md's anchor
+`verify.py` runs thirteen structural checks: anchor integrity, SKILL.md's anchor
 lists, YAML validity (including every fenced YAML example in the docs — these
 are the product, users copy them), theme light/dark symmetry, banned
 (nonexistent) component variables, the Iron Law in card examples,
 version-string consistency, Anthropic's SKILL.md frontmatter spec, metadata
-sanity, routing coverage, and orphaned reference files. Every one exists
+sanity, routing coverage, duplicated content between reference files, and
+orphaned reference files. Every one exists
 because that class of bug shipped at least once.
 
 `test_verify.py` is the answer to "who checks the checker": it injects each bug
 class into a throwaway copy of the library and asserts `verify.py` still
 catches it.
 
-Behavioural testing is separate: `references/eval-set.md` holds twelve prompts
+Behavioural testing is separate: `references/eval-set.md` holds twenty-one prompts, with `EVAL-SCORESHEET.md` to record a run
 with pass/fail criteria, run in fresh conversations. The scripts prove the
 library is structurally sound; the eval set proves it changes behaviour.
 
@@ -127,8 +128,8 @@ Counts are estimated from character counts weighted by content type, so expect
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `verify.yml` | push, PR | `verify.py`, `test_verify.py`, and `token_budget.py --check`. On PRs, comments the SKILL.md token delta. Link check runs alongside, advisory only. |
-| `upstream-drift.yml` | Mondays 06:00 UTC | Compares component pins against the latest upstream releases; opens or updates one issue when a pin falls behind. |
+| `verify.yml` | push, PR | `verify.py`, `test_verify.py`, and `token_budget.py --check`. On PRs, comments the SKILL.md token delta. |
+| `upstream-drift.yml` | Mondays 06:00 UTC | Compares component pins against the latest upstream releases; opens or updates one issue when a pin falls behind. Also checks external links (advisory) — off the push path, since a rotted link elsewhere should not block a PR. |
 | `release.yml` | tag `v*` | Verifies, checks the tag matches SKILL.md metadata, builds the `.zip` and `.skill` bundle *without* `scripts/`, verifies the packaged tree, and publishes a GitHub Release. |
 
 ```bash
@@ -256,8 +257,8 @@ See `references/dashboard-system.md` for the complete architecture and
 
 ## Version
 
-Current: **v1.6** (2026-08-29)  
-Component pins: Bubble Card 3.3.0 · SGCC (README-documented) · Advanced History 2.0.1 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0 · guidance verified against HA 2026.9
+Current: **v1.8** (2026-10-30)  
+Component pins: Bubble Card 3.4.2 · SGCC 4.08 (README-documented) · Advanced History 2.0.1 · Bubble Card Tools 1.0.2 · Streamline Card 0.2.2 · Sidebar Card 0.1.9.9 · HA minimum 2024.3.0 · guidance verified against HA 2026.10
 
 See `CHANGELOG.md` for full version history and update triggers.
 

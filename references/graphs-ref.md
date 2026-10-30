@@ -83,6 +83,13 @@ type.
 > depend on it. This is a maintenance-risk consideration, not an accusation:
 > the card is actively maintained and widely used.
 
+**The installed version is checkable, though.** Minification does not hide the
+version string: it stays in the bundle's string table, so
+`grep -o "'4\.[0-9][0-9]'" statistics-graph-chart-card.js` reports it. Use that
+when a user's symptom depends on a version gate — this skill's option notes
+carry `(v4.0x)` markers for exactly that purpose. The pin in `SKILL.md`
+metadata is a real version, not an era.
+
 Practical consequences to raise when it matters:
 - A minified bundle cannot be audited, patched locally, or forked if the
   maintainer stops. The degradation path is a rewrite to native cards, not a
@@ -122,12 +129,71 @@ entities:
 | `data_source` | `auto` / `statistics` / `history`. See `#graph-performance` — this is the option that protects the database. |
 | `chart_mode` | `timeline` (default) plus scatter, pie, ranking, radialbar, polararea, radar, heatmap, calendar, gauge, box, waterfall, histogram. Anything other than `timeline` is a deliberate analysis choice; do not pick one for decoration. |
 | `card_shadow` / `card_border` | Set both `false` when the card sits inside a decorated background or a Bubble pop-up, so it does not double up on the theme's card chrome. |
+| `axis_style: native` | **v4.03/4.04.** Draws axes, grid and the per-entity legend exactly as HA's own charts do — labels in `--primary-text-color` at 12 px, grid in `--divider-color`. The default `subtle` is the card's own quieter look. **Reach for `native` whenever an SGCC card sits next to native HA cards**, which is the usual case in a sections view: it is the single option that stops a custom graph card reading as foreign. There is no legend-only switch — `subtle` is the way back. |
+| `include_area_names: true` | **v4.07.** Appends each entity's HA area to its label (`Temperature · Lounge`) across the state row, legend, tooltip and exports. `use_only_area_name: true` shows the area alone — the right choice for a room-by-room climate card, where every series has the same sensor name. |
+| `graph_group` (per entity) | **v4.08.** Splits one card into **chart pages** — entities sharing a group name are drawn together on a page of their own, a dot strip under the graph switches between them. One fetch, one height, one date picker and zoom for all pages. See below. |
+| `enabled` (per entity) | `false` makes the card behave as if the entity were never configured — nothing fetched, no palette slot, the entity id not even validated. **Built for Streamline templates** where some instances lack a sensor: pass a per-instance variable instead of maintaining a second template. Since v4.05 it also takes an entity id for a live switch (`input_boolean.x`, or `"!input_boolean.x"` quoted to invert). |
 
-**Iron Law applies unchanged.** Entity `color:` and `card_icon_color:` accept
-any CSS value — so use `var(--accent-color)` and the theme's colour variables,
-never a hex literal. SGCC reads `--primary-font-family` for canvas-rendered
-charts, so typography follows the theme automatically. The period-highlight
-band can be themed globally with `--sgc-period-highlight-color`.
+**Chart pages (`graph_group`) are the real space lever.** A graphs view is
+usually a stack of near-identical cards — the same window, the same picker, the
+same height, repeated per room. `graph_group` collapses that into one card the
+user pages through, which costs one fetch instead of N and one grid cell
+instead of N. It works in every chart mode, and the legend and state row follow
+the page on screen.
+
+```yaml
+# One card, three pages — climate, power, water
+type: custom:statistics-graph-chart-card
+card_header: House
+axis_style: native
+height: auto
+data_source: statistics
+entities:
+  - entity: sensor.temperature_living
+    graph_group: Climate
+  - entity: sensor.humidity_living
+    graph_group: Climate
+  - entity: sensor.power_total
+    graph_group: Power
+  - entity: sensor.water_daily
+    graph_group: Water
+```
+
+Entities **without** a `graph_group` stay on the main page; every further name
+adds a page in the order the names first appear. Not the same as `stack_group`
+— entities on different pages are never drawn together, so they cannot stack.
+Not templatable.
+
+**One picker for several cards.** `interval_picker_group`,
+`pph_picker_group`, `group_by_picker_group` and `date_picker_group` let one
+visible picker drive every card sharing the group; receivers need no picker at
+all. `sync_group` sets all four at once, and
+`custom:statistics-graph-chart-controller` is a chart-less one-row card holding
+only the date-picker bar. On a graphs view this removes N−1 copies of the same
+chrome — the calm-technology answer to a page of charts.
+
+**Iron Law applies unchanged, and v4.05 widened the surface it applies to.**
+Entity `color:` and `card_icon_color:` accept any CSS value — so use
+`var(--accent-color)` and the theme's colour variables, never a hex literal.
+SGCC reads `--primary-font-family` for canvas-rendered charts, so typography
+follows the theme automatically. The period-highlight band can be themed
+globally with `--sgc-period-highlight-color`.
+
+Three newer places invite a hex literal and must not get one:
+
+- **`card_background_color`, `card_border_*`, `card_padding`, `card_shadow`,
+  `card_header_color`** — dedicated styling options, applied **inline**. Use
+  `var(--ha-card-background)`, `var(--divider-color)`,
+  `var(--primary-text-color)`.
+- **`styles`** (v4.05) — a plain-CSS block inside the card, targeting the same
+  class names card-mod users do (`.sgc-card`, `.sgc-title`, `.sgc-plate`…)
+  with no card-mod installed. It is **static CSS only**, no templates, and it
+  is kept across visual-editor saves. The Iron Law reads the same here as in
+  any `styles:` block: variables, not literals.
+- Because the `card_*` options are applied inline, a `styles` rule for the
+  same property needs `!important` — exactly as with card-mod. **Don't set
+  both for one property.** Pick the option when one exists; reach for `styles`
+  only for what the options don't cover.
 
 ---
 
@@ -197,5 +263,14 @@ the current chart through the SGCC editor.
 **Scope boundary.** Configuring the panel, its card defaults, and its bookmarks
 happens in its own UI and YAML — this skill points users to it and explains
 when it is the better answer, but does not generate its configuration.
+
+**One interop detail is worth carrying.** Advanced History gives several
+entities the same friendly name — it picks targets by area and device, so a
+multi-room selection arrives as four series all called "Temperature". SGCC
+v4.07's `include_area_names: true` (or `use_only_area_name: true`) is upstream's
+own answer to that, and it is named in the SGCC README for this exact case. If
+a user reports an unreadable legend after selecting a whole floor, that option
+is the fix — not renaming entities, which carries the risk documented in
+`dashboard-system.md#entity-rename-risk`.
 
 ---

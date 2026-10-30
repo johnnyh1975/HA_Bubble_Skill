@@ -462,6 +462,38 @@ them when a wall-panel or kiosk profile is selected, then let the user decide.
 - Motion-sensitivity rules for always-on displays (no long animations, no
   `rise_animation`) are in SKILL.md §2 Accessibility and apply here in full.
 
+**Bubble Card v3.4.2 fixed four defects that only an always-on panel hits.**
+A panel runs for weeks on one page load, so it is the device that pays for a
+leak and the device that reconnects most often. If a user describes any of
+these, the answer is "update Bubble Card", not a YAML change:
+
+| Symptom on a panel | Cause, fixed in |
+|---|---|
+| The page gets heavier and slower the longer the panel stays up | Every slider sub-button kept a click listener on the document for the life of the page, holding each card HA threw away on a re-layout — with its whole section. **v3.4.2** |
+| A triggered pop-up is open after the tablet wakes, with the trigger long since off | A rebuilt card took its first look for a page load, where an open pop-up is never closed. Trigger state now carries across a rebuild, per hash. **v3.4.2** |
+| A bottom-sheet header frozen at the bottom of the screen for the rest of the session | A third-party card rebuilding the view mid-close (#2589) left a shell nobody owned. Shell state is now reconciled against the URL. **v3.4.2** |
+| Dropdowns do nothing at all on an older iPad or the macOS app | HA's custom-state polyfill on Safari < 17.4 made `document.createElement` hand back an inert element (#2663). **v3.4.2** |
+
+**Sidebar offset — the mechanism changed at HA 2026.6.** Pop-ups, the footer
+card and the HBS bar are `position: fixed`, so they offset themselves to stay
+centred on the dashboard rather than on the viewport.
+
+- **HA 2026.6+:** HA publishes `--ha-sidebar-width` itself and Bubble Card
+  reads it directly — no measuring runs. Kiosk mods (`kiosk-mode`, WallPanel)
+  hide the sidebar by changing that same variable, so they now cooperate by
+  construction. v3.4.2 additionally fixed those cards drifting off-centre
+  after the sidebar was expanded, collapsed or hidden (#2641).
+- **Below 2026.6:** the token was `--mdc-drawer-width`, a width that never
+  said whether the sidebar was *visible*. A theme or kiosk mod still defining
+  it offset a pop-up by a sidebar nobody could see — 256 px to the right, which
+  on a tablet pushes it off screen while it still swallows every tap (#2537).
+  Bubble Card measures the rendered panel instead and publishes
+  `--bubble-content-inline-start`.
+
+If a panel still shows off-centre fixed cards, the override is to set
+`--bubble-content-inline-start` in the theme — but only on HA 2026.6+, where
+nothing overwrites it. See `css-theme-ref.md#bubble-vars`.
+
 ---
 
 ## #sections-anatomy

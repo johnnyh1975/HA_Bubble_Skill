@@ -23,6 +23,497 @@ actual `var()` fallback chain in source rather than trusting documentation.
 
 ---
 
+## v1.8 — 2026-10-30
+
+Bubble Card v3.4.0 → **v3.4.2** and Statistics Graph Chart Card v4.02 →
+**v4.08**. Verified against the v3.4.2 source tree (full `src/` diff, 44
+changed files plus 10 new ones) and the SGCC README diff. HA pin moved to
+2026.10.
+
+### Four defects in the skill's own guidance
+
+Found while diffing, not while reading release notes — all four had shipped:
+
+- **`select_attribute: percentage` on a fan and `select_attribute: mode` on a
+  humidifier were both wrong**, in the `#entity-domain-map` table and in a
+  worked example. `select_attribute` reads a closed list of names hard-coded in
+  `src/components/dropdown/lists.js`; neither of those is on it, and neither
+  ever was. The failure is silent — the card renders options only when the
+  attribute is an array and renders none otherwise, so a copied example gave an
+  empty dropdown with no console error. New `bubble-card-ref.md#select-attribute`
+  documents all fourteen valid names with their services, and the fan example
+  now uses a slider.
+- **`popup_style: home-assistant` was undocumented entirely.** The skill listed
+  two values (`bubble`, `classic`); the source has three, and the third was
+  already in the v3.4.0 README — so this was missed in the v1.7 round, not
+  newly introduced. It matters more now because v3.4.2 changed its mobile
+  height behaviour.
+- **`popup_mode` listed `adaptive-dialog` twice** and omitted the fact that
+  only two of its four values are read with the HA style.
+- **The `--bubble-footer-width` caveat was imprecise** — it lumped the themeable
+  knob together with the runtime-derived `--bubble-footer-resolved-width`.
+
+### Bubble Card 3.4.0 → 3.4.2
+
+- **Four new `select_attribute` lists** (v3.4.2): `fan_speed_list` (vacuum →
+  `vacuum.set_fan_speed`), `activity_list` (remote → `remote.turn_on`),
+  `direction` (fan, gated on the `SET_DIRECTION` feature bit) and
+  `alarm_modes` (alarm panel). Two of them are *computed*, not read from
+  attributes: `direction`'s options come from HA, and `alarm_modes` is built
+  from `supported_features`.
+- **The alarm keypad has three routes, not one.** A numeric code on HA frontend
+  2026.3+ gets a 12-key keypad inside the dropdown menu; a code with letters,
+  or an older frontend, opens the more-info dialog instead; a default code
+  stored on the entity skips the prompt. Documented as a table, because
+  promising an in-card keypad without checking the frontend version is wrong
+  most of the time on older installations.
+- **`slide_to_close`** (v3.4.1): `true` / `header` / `false`. `header` is the
+  answer to a pop-up holding a map or a chart, where the dismiss gesture fights
+  the content. Ignored below v3.4.1 — the gesture stays on there.
+- **`popup_style: home-assistant` mobile height changed** (v3.4.2) and this is
+  a **behaviour change on upgrade**: the sheet now takes the full more-info
+  height unless `popup_mode: adaptive-dialog`. Before v3.4.2 the editor
+  disabled the mode control for this style and the sheet followed its content,
+  so an existing pop-up with no `popup_mode` changes look when the user
+  updates. `popup_mode: centered` is not read at all with this style.
+- **`with_bottom_offset`** now also applies with the HA style in any mode,
+  because that style is a sheet on a narrow screen whatever its mode says.
+- **Calendar card: two changes worth generating differently.**
+  `event_action.tap_action` now defaults to `more-info` (was `none`), and that
+  `more-info` opens **HA's event dialog** with the event's description and
+  location — not the calendar entity's more-info, which only knows the next
+  event. The card also subscribes to the event list over the WebSocket, so an
+  event edited or deleted further out updates at once; before v3.4.2 only a
+  change to the *next* event refreshed it, which is why a wall panel could show
+  a cancelled appointment all day. `days` now also sets the subscription
+  window.
+- **`subButtonState[]` indexing was broken until v3.4.2** (#2165) and the skill
+  documented it as if it were not. The walk read ungrouped `main` buttons, then
+  every group, and **never read the ungrouped `bottom` ones at all** — so on
+  v3.1–v3.4.1 it disagreed with `subButtonIcon[]` on any card mixing groups
+  with loose sub-buttons, and some buttons had no index. Now version-gated,
+  with the advice to read through `hass` below v3.4.2.
+- **`footer_width` behaviour changed** (v3.4.2, #2620). Below a 600 px viewport
+  the footer used to be forced full width, discarding a configured width — so
+  the same 300 px footer obeyed the setting in landscape and ignored it in
+  portrait. It is now clamped to `min(footer_width, content − 16px)`. Any
+  `styles:` workaround written for the old behaviour should be removed.
+- **Sub-button contrast is now measured, not thresholded** (v3.4.1). New
+  `--bubble-sub-button-light-text-color`; `--bubble-sub-button-dark-text-color`
+  softened its default from `rgb(0,0,0)` to `rgba(0,0,0,0.65)`. **A `styles:`
+  override written to force icon contrast on a light sub-button now fights a
+  correct answer** — the guidance says to delete it. Added as a pitfall, since
+  the instinct to add one is strong.
+- **Render gate rebuilt** (v3.4.2) with a documented symptom attached. v3.4.0
+  compared a fixed list of `hass` keys which omitted HA's *formatters* — those
+  arrive once translations load, so a card could render a **raw state**
+  (`heat_cool` rather than "Heat/Cool") until something made it render again.
+  v3.4.2 compares identity across everything outside `states` and skips nothing
+  for 10 s after connect or reconnect, measured upstream at 50–70 ms extra on a
+  31-card dashboard under a 4× CPU throttle. The fix for that symptom is an
+  update, not a template.
+- **Sidebar offset mechanism changed at HA 2026.6**, which rewrites part of
+  `#wall-panel-hardening`. HA now publishes `--ha-sidebar-width` itself and
+  Bubble Card reads it directly — no measuring runs, and kiosk mods cooperate
+  by construction because they change that same variable. Below 2026.6 the
+  panel is measured, as before. Consequence for themes:
+  `--bubble-content-inline-start` **is** settable in a theme on 2026.6+, where
+  nothing overwrites it.
+- **Four wall-panel defects fixed in v3.4.2**, now a table in
+  `#wall-panel-hardening`: a slider sub-button's document listener leaked a
+  card per re-layout (the "page gets heavier over days" report); a triggered
+  pop-up stayed open after a tablet woke because a rebuilt card took its first
+  look for a page load; a third-party card rebuilding the view mid-close
+  (#2589) orphaned a bottom-sheet header for the session; and HA's custom-state
+  polyfill on Safari < 17.4 made dropdowns inert (#2663) — an old iPad symptom.
+- **Legacy pop-up migration now covers `grid` containers**, and the migrated
+  standalone pop-up inherits the container's `grid_options` / `layout_options` /
+  `view_layout` and merges its `visibility:` conditions. A `grid` whose parent
+  key is `sections` or `views` is correctly *not* treated as a container.
+- **HA 2026.10 interop**: the conditions editor re-adds an already-ticked user
+  to a `condition: user` on each rebuild (#2657); v3.4.2 drops the repeats.
+  Also fixed: config-deep-copying plugins (UIX, layout-card) breaking that
+  editor.
+- Six new troubleshooting rows covering the above symptoms, each pointing at
+  "update" rather than at a YAML workaround.
+
+### Statistics Graph Chart Card 4.02 → 4.08
+
+- **The version is readable after all.** `#sgcc-status` said the pin was "an
+  era, not a version" because the bundle is minified. Minification does not
+  strip the string table: `grep -o "'4\.[0-9][0-9]'"` on the bundle reports it.
+  The pin is now `4.08`, and `check_upstream.py`'s note carries the command
+  instead of "check manually". The source-review caveat stands unchanged — a
+  minified bundle still cannot be audited, patched or forked.
+- **`axis_style: native`** (v4.03/4.04) — draws axes, grid and the per-entity
+  legend exactly as HA's own charts do, in `--primary-text-color` and
+  `--divider-color`. Promoted deliberately: it is the single option that stops
+  a custom graph card reading as foreign next to native cards, which is the
+  usual case in a sections view.
+- **`graph_group` chart pages** (v4.08) — entities sharing a group name are
+  drawn on a page of their own, with a dot strip under the graph. One fetch,
+  one grid cell and one picker for what used to be N near-identical cards. This
+  is the real space lever on a graphs view, so it gets a worked example.
+- **`sync_group` and the controller card** (v4.03) — one visible picker drives
+  every card in the group; receivers need no picker. Removes N−1 copies of the
+  same chrome, which is the calm-technology argument for it.
+- **`include_area_names` / `use_only_area_name`** (v4.07) — documented against
+  the Advanced History interop it was built for. Advanced History picks targets
+  by area and device, so a whole-floor selection arrives as four series all
+  called "Temperature"; this option is upstream's own answer, and it beats
+  renaming entities (`#entity-rename-risk`).
+- **Per-entity `enabled:`** — cross-referenced into `streamline-ref.md`,
+  because upstream documents it as built for Streamline: the entity id is not
+  even validated when disabled, so an unsubstituted `[[placeholder]]` is
+  harmless. Added to the "this instance lacks that sensor" options, ahead of
+  forking a template.
+- **Iron Law surface widened.** v4.05 added a `styles` block of plain CSS
+  (card-mod class names, no card-mod needed) plus `card_background_color`,
+  `card_border_*`, `card_padding`, `card_shadow` and `card_header_color`. All
+  of it is Iron Law surface and all of it invites a hex literal. Also recorded:
+  the `card_*` options are applied **inline**, so a `styles` rule for the same
+  property needs `!important` — don't set both.
+
+### Eval set: 18 → 21 cases
+
+Same selection criterion as 13–18, pushed one step further: in each of the
+three, the **user's own wording describes the wrong answer**.
+
+- `#eval-19-select-attribute` — a fan "von 0 bis 100 %" and a request for a
+  dropdown. Every surface signal says `select_attribute: percentage`; the
+  entity really has that attribute; the result is an empty dropdown with no
+  error.
+- `#eval-20-ha-style-popup` — a pop-up that changed height after an update,
+  with `popup_mode: centered` in the config. The obvious reading is that the
+  named mode stopped working. The truth is that it was never read.
+- `#eval-21-sgcc-styling` — two hex codes handed over, for options named after
+  exactly the properties they describe. The compliant-looking answer is the
+  non-compliant one.
+
+### CI
+
+- `token_budget.py --check` caught SKILL.md going 15 tokens over budget on the
+  first pass. Resolved by **consolidating** rather than raising the budget:
+  two of six new Signal Scan rows merged into neighbours, one new pitfall
+  merged into the existing `subButtonIcon` row. SKILL.md 16,166 → 16,804
+  tokens; baseline moved.
+- `verify.py` caught the README and test-dashboard version strings left at 1.7.
+
+
+## v1.7 — 2026-09-19
+
+Bubble Card v3.4.0 support. Verified against the v3.4.0 source tree.
+
+### Bubble Card 3.3.0 → 3.4.0
+
+- **`state_content` documented** (new `bubble-card-ref.md#state-content`). One
+  ordered list now describes the state line of a card or sub-button, the way
+  Home Assistant writes it on its tile card and badges, replacing
+  `show_state`, `show_attribute`, `attribute`, `show_last_changed` and
+  `show_last_updated`. Includes the domain-default table copied from the HA
+  frontend, the zero-attribute suppression rule (an off light shows *Off*, not
+  *0 %*), and the aliases.
+
+  The migration behaviour matters more than the syntax: the five legacy keys
+  keep working, **but opening the card in the visual editor rewrites them to
+  `state_content` on save**. Guidance is therefore version-conditional —
+  generate `state_content` for v3.4.0+, legacy keys below it, and never both
+  for the same card, since `state_content` wins outright and the leftovers
+  become dead config.
+- **Home Assistant templates in card config** (new `#ha-templates`). Jinja2
+  now evaluates in `name`, `icon`, sub-button `name`, `state_content` items,
+  and inside `styles:` alongside the existing JavaScript `${ }` templates.
+  Documented with the cost note (evaluated on every relevant state change —
+  fine for one card, not for forty), the scope boundary (this is presentation
+  templating, template *sensors* remain an ha-yaml handoff), and the Iron Law
+  reminder that a template returning a colour must return a theme variable.
+- **Render performance rework noted.** v3.4.0 measured 43 renders/second at
+  rest on an A10 iPad with 78% of them unnecessary, and added a render gate
+  observing each card's real dependency set, plus deferred card updates and
+  lazy editor previews. Nothing to generate, but it changes the advice around
+  pop-up `performance_mode`: update and measure before reaching for it.
+- Two version-compat rows, three troubleshooting entries (legacy keys
+  "vanishing" after a UI edit, raw `{{ … }}` on older versions, `state_content`
+  silently winning over legacy keys), and two Signal Scan rows so the version
+  gate fires before generation.
+
+### Systematic source review — started
+
+Pattern scans find surface; they cannot find behaviour. A file-by-file read of
+the Bubble Card source is now underway, tracked in `CODE-REVIEW-LOG.md` so it
+survives across sessions. First file done: `cards/pop-up/helpers.js` (3,082
+lines), which yielded four behaviours no scan would have surfaced:
+
+- **`performance_mode` content deferral applies only to `popup_mode: default`.**
+  Extending it to `adaptive-dialog` was tried upstream and reverted — it pushed
+  the open 120 ms past the end of the slide on an iPad 6. Performance mode still
+  helps on other modes, through its other effects. Documented beside the mode
+  table, because pairing the two expecting deferral is exactly what the option
+  names invite.
+- **The mechanism behind the top-level pop-up rule.** A pop-up suspends the
+  `hui-card` cell hosting it so it reserves no height. Inside a grid, masonry or
+  `layout-card` it has no own cell — the nearest wraps the whole view — so
+  Bubble Card suspends nothing and the pop-up reserves visible empty space. The
+  rule was already there; now it has its reason.
+- **`close_on_click` on touch ignores scrolls and drags** (>10 px of movement
+  reads as a gesture), and native HA buttons inside a pop-up now work with it.
+- Speculative shell warm-up at idle explains the memory-at-rest and fast-first-
+  open behaviour of pop-up-heavy dashboards.
+
+Two more pop-up files done:
+
+- **Card order inside a pop-up now has a performance meaning**
+  (`cards/create.js`). A large pop-up renders only enough leading cards to fill
+  the first viewport before the open transition — the fold estimated from grid
+  spans — and hydrates the rest afterwards, one budgeted step at a time.
+  Off-screen cards skip `hass` updates until scrolled in. The most-used control
+  belongs first in `cards:`, or the user waits for hydration before they can
+  touch it. Same ordering the engagement-type model already asks for, now with
+  a measurable payoff.
+- **`time` and `template` conditions in a pop-up header are expensive**
+  (`index.js`). Bubble Card memoises the header against the entities its
+  conditions reference; those two cannot be tracked that way, so one of them on
+  any header sub-button forces the whole header to refresh on every HA state
+  change anywhere. A relative-time field does the same. Cost note added with
+  the entity-based alternative.
+- **Corrected: pop-up hashes are unique per dashboard, not globally.**
+  Registration is keyed on the dashboard path, so `#settings` on two dashboards
+  is fine. The option table said "unique" without qualification.
+- A templated `name:`/`icon:` is resolved for HA's navigation picker, so a
+  pop-up appears there with what it shows rather than raw template text.
+
+Two more files, including a correction to a skill error:
+
+- **`water_heater` was wrongly documented as unsupported.** `isStateOn` handles
+  it explicitly — a water heater has no `on`, its state is the operation it
+  runs, so anything but `off`/`unknown`/`unavailable` reads as active, the same
+  rule HA uses. A `button_type: state` card shows and colours it correctly;
+  only toggling and sliding are unavailable. The domain-list paragraph now
+  separates *control* from *display*, since active-state detection is a
+  broader rule than the toggle/slider sets.
+- **`min_value` / `max_value` / `step` are overrides, not descriptions.** Left
+  unset the slider reads the entity's own `min_temp`/`max_temp` or `min`/`max`/
+  `step`. The `number` row previously said to set them "matching entity" —
+  which freezes the range, so the card keeps the old bounds after the entity's
+  change. Rewritten, with the safety clamp (climate min+1, others min+100)
+  documented as the diagnostic for a slider stuck at a pinned value.
+- **A templated `name:` has no fallback**: a plain `name:` falls back to the
+  friendly name, a template shows exactly what it returns, empty included.
+  Documented with the `or 'default'` pattern.
+
+Two more files, including a second stale claim removed:
+
+- **The `cover_background` performance warning was out of date.** The skill said
+  it "fetches album art on every state change — avoid on dashboards with many
+  simultaneous media players". The crossfade has since been rewritten because
+  the old one raced with itself: it now keys on the target image, runs one fade
+  at a time with later requests queued rather than stacked, and keeps only the
+  last queued request. Holding "next" costs one extra fade, not one per press,
+  and a playing player no longer re-fetches. Rewritten — the remaining cost is
+  image decode.
+- **Entity-picture precedence on sub-buttons**: an entity with an
+  `entity_picture` shows it instead of an icon, suppressed by `force_icon` or
+  by the sub-button's **own** `icon` — the card's icon does not suppress it. A
+  person sub-button meant to show a face therefore needs no `icon:` at all.
+- **`scrolling_effect` cascades** sub-button → card → `true`; documented with
+  its real default chain rather than a flat `true`.
+- **Timer sub-buttons tick live** while the timer is active, if the state line
+  includes `state` or `remaining_time` — the entity itself does not update per
+  second.
+
+`sub-button/create.js` done — two findings that change generated YAML:
+
+- **Sub-button classes have different stabilities.** Each carries
+  `.bubble-sub-button-<index>`, a class derived from `name:`, and `.<css_class>`
+  if set. The name-derived one breaks on a rename *and on a translated name*,
+  and is not generated at all for a templated name. The `#css-selectors`
+  guidance previously said only "prefer `css_class`"; it now says which of the
+  three to target and why — a user who translates their dashboard loses every
+  style hung on a name.
+- **Mixing loose sub-buttons with explicit groups reorders them.** All loose
+  buttons in a section are collected into one automatic group placed where the
+  first of them appeared, not interleaved in YAML order. Documented with an
+  example, since the YAML reads as though order is preserved and it is not.
+
+`tap-actions.js` and `icon.js` done:
+
+- **`tap_action: none` also removes the press ripple.** Feedback is attached
+  only when at least one of tap, double-tap or hold is not `none`, so a
+  state-only card *looks* non-interactive rather than merely behaving that
+  way. That turns the engagement-type model's "Overview cards take
+  `tap_action: none`" from a convention into a mechanical one — the difference
+  between a card that ignores a tap and one that never invited it. Hold timing
+  (500 ms) documented; the existing 200 ms double-tap note verified correct.
+- **`icon:` and `name:` treat an empty template result oppositely.** An icon
+  template rendering nothing falls through to the entity's icon; a name
+  template shows the empty string. Documented as a pair, since the asymmetry is
+  invisible and they sit side by side.
+- **Setting `icon:` overrides HA's entire resolution chain** — including the
+  entity-registry icon a user set in the UI and the domain state icons (a lock
+  showing open vs closed). Added a "usually don't set it" note, which also
+  trims generated YAML.
+
+`types/slider/index.js` and `text-scrolling.js` done — the card-near files are
+now covered:
+
+- **Slider sub-buttons inherit nothing from the card.** Every slider option is
+  read from the sub-button only; setting `tap_to_slide`, `read_only_slider`,
+  `min_value` and the rest on the card does nothing for a
+  `sub_button_type: slider`. This is **not** the same rule as
+  `scrolling_effect`, which does fall back to the card — the cascade is
+  per-option, so neither direction can be assumed. Documented with the full
+  list.
+- An unset slider option stays genuinely absent rather than defaulted, which is
+  what lets `slider_value_position` follow the reading direction in RTL
+  languages. Pinning it to `right` breaks that.
+- **Corrected an imprecision introduced earlier in this review:**
+  `show_button_info` forces `slider_value_position: right` only together with
+  `always_visible: true`, not unconditionally as the table claimed.
+- `scrolling_effect` is cheaper than it looks: only text that actually
+  overflows gets a marquee, and a marquee holds a composited layer only while
+  genuinely on screen. The option row now says so, and points at the
+  motion-sensitivity rule for when to disable it regardless.
+
+### Eval set extended to cover the code review
+
+The eval set tested the surface guidance but none of the behaviour the source
+review found — so a passing run would have validated the wrong things. Six
+cases added (18 total), chosen by one criterion: **the correct answer
+contradicts what the YAML looks like it should do**, which is exactly where a
+model reasoning from the config's shape goes wrong.
+
+| Eval | Tests |
+|---|---|
+| 13 | `state_content` replaces five legacy keys from v3.4.0, never alongside them |
+| 14 | slider options do not cascade from the card to a slider sub-button |
+| 15 | a hardcoded `icon:` overrides HA's state-dependent resolution chain |
+| 16 | loose sub-buttons mixed with a group are collected and moved |
+| 17 | `min_value`/`max_value` are overrides that freeze the entity's range |
+| 18 | the name-derived CSS class breaks on rename and translation |
+
+Also added: **`EVAL-SCORESHEET.md`**, a per-run sheet with the 18 cases, the
+scoring rule, and what to do with each failure shape — a FAIL usually means
+missing guidance, a PARTIAL usually means the guidance exists but is not
+reachable from the Signal Scan or the process tree, so the fix is routing
+rather than restating the rule.
+
+And a note in the eval set on **who may run it**: not the model that wrote the
+guidance in the same conversation, which knows every answer and would score
+itself 18/18 for nothing. Fresh conversations, ideally reviewed by someone who
+did not write the rules being tested.
+
+**Module system: contract read, UI skipped.** The module folder splits cleanly
+in two, and only one half is worth reading. `parser.js` and `yaml-schema.js`
+define what a valid module *is* — and the skill generates module YAML, so that
+contract matters. `store.js`, `editor.js`, `module-editor.js` and the install
+flow (~5,500 lines) are the Module Store UI, which the skill never generates
+and a user only meets through the interface; skipped deliberately, recorded as
+such rather than left ambiguous. Findings:
+
+- **The accepted key set is larger than documented**: `unsupported`,
+  `is_global`, the legacy `form_schema` alias of `editor`, plural/singular
+  `supported_card(s)`, and the legacy `author` / `type` / `info` container.
+  Full table added, with the rule to generate only the modern spellings.
+- **`unsupported:` was undocumented** — the inverse of `supported:`, shorter
+  for a module that fits everything but one card type and stable when Bubble
+  Card adds a card type.
+- **`is_global: true` applies a module to every card** with no per-card opt-in.
+  Documented with the warning that it makes the performance rules in
+  `#module-performance` mandatory rather than optional.
+- **`!include` works inside module YAML**, resolved against `/local/bubble/`.
+
+`CODE-REVIEW-LOG.md` carries the coverage table (144 files, 47,582 lines),
+the resume procedure, and findings per file. Excluded from the install bundle.
+
+### Coverage audit of the analysis method
+
+The v3.4.0 review used pattern scans over the source tree, not a full read:
+144 non-test files, 47,582 lines, of which perhaps 15 files were opened. That
+method was tested for its own blind spots and two came back clean — no config
+key is read only via destructuring (`const { x } = config`) or bracket
+notation, so the `config.x` scan was not missing options. One editor-only key
+surfaced, `style_templates`, already documented as the legacy alias of
+`modules`.
+
+Opening one previously unread file (`cards/pop-up/migration.js`, 914 lines)
+produced one new finding, which is the honest measure of how complete the scan
+was: the pop-up migration notice is **one-shot**, recorded in `localStorage`,
+and the migration converts legacy content cards to a 12-column grid layout.
+Two troubleshooting entries added — a user who dismissed the notice will not
+see it again, and migrated cards come out with different widths on purpose.
+
+### Three more undocumented surfaces
+
+Pushed past the YAML option surface after the coverage question. Four scans,
+three gaps:
+
+- **Actions** (`#actions`). Bubble Card dispatches a `hass-action` event, so
+  the action set is Home Assistant's own, not a Bubble-specific list. Two were
+  missing: **`assist`** (with `pipeline_id` and `start_listening`) and
+  **`perform-action`**, HA's 2024.8 rename of `call-service`. Both names still
+  work; guidance now generates `perform-action` and marks `call-service` as
+  legacy.
+- **JS template scope** (`#js-templates`). The compiler's in-scope names are
+  now listed in full as verified against v3.4.0. One was undocumented:
+  **`renderTemplate(template, entity?)`** (v3.4.0+), which renders a Jinja2
+  template from inside a JS template — the bridge that lets one `styles:`
+  block mix both systems. Noted that it is rarely needed now that Jinja works
+  directly in `name`, `icon` and `state_content`, and that it needs a `typeof`
+  guard in shared modules.
+- **CSS selectors** (new `#css-selectors`). The skill showed about a dozen
+  `.bubble-*` classes by example; Bubble Card renders roughly 110 card-facing
+  ones. Curated by card type rather than dumped — a full list would be noise,
+  and most are structural wrappers nobody targets. The important part is the
+  warning attached: these are internal names, not a stable API (the
+  `bubble-cover-crossfade-*` set did not exist in earlier 3.x), so prefer a
+  `--bubble-*` theme variable where one exists, and use `css_class` to add
+  your own rather than depending on Bubble Card's.
+
+Scanned and clean: the YAML option surface (0 gaps) and the module helper API.
+
+### CSS variable catalogue completed
+
+A systematic scan of `--bubble-*` variables found the skill documented 15 of
+82 themeable ones. The 15 are the Casa5HeyneV2 mappings and remain the right
+default — they drive colour and radius everywhere through the HA variables
+they point at — but the missing 63 are the component-level knobs for cases a
+global mapping cannot express.
+
+Added to `css-theme-ref.md#bubble-vars`, grouped by component, with the
+warning that using them breaks the one-accent-lever property that makes the
+theme maintainable, and the reminder that they still belong in the theme
+rather than on the card.
+
+The most useful group is the climate HVAC mode colours
+(`--bubble-state-climate-heat-color` and siblings) — a common request the
+skill previously could not answer, since HA's own climate colours do not
+reach Bubble Card.
+
+Runtime-computed variables (pop-up available height, scroll-lock size, mask
+stops) are deliberately excluded and called out as ineffective in a theme:
+Bubble Card overwrites them on every render. Distinguishing the two was the
+point of the scan — reporting all 98 undocumented names would have been noise.
+
+Not a v3.4.0 change: this was a long-standing documentation gap, found only
+because this round's analysis went past the YAML option surface.
+
+### Tooling
+
+- **`test_verify.py`**'s version-drift fixture hardcoded `skill v1.6` and broke
+  on the version bump — the self-test correctly reported its own fixture as out
+  of date rather than passing silently, which is exactly its job. Now
+  version-agnostic.
+
+### Verified unchanged
+
+- Module helper API is still `onTeardown` and `hasChanged` at 3.3.0 — no new
+  names to guard with `typeof`, so `#module-performance` stands as written.
+- Editor schemas are unchanged from 3.3.0. As in the 3.3.0 round, the entire
+  new surface lives in runtime code: an editor-level scan would have found
+  nothing.
+
+---
+
 ## v1.6 — 2026-08-29
 
 New capability: graph and history coverage. Adds support for two components
@@ -174,21 +665,30 @@ Both are now regression-tested (`test_verify.py`: 13/13). `verify.py` is at
 The lesson generalises: a check that reads *any* mention as a reference will
 be defeated by the file that documents deletions.
 
-### Link check tuning
+### Link check — moved off the hot path and made fast
 
-The external-link job reported one error: Patreon returns 403 to automated
-requests. The link is correct — Patreon simply blocks bots. Excluded, along
-with `homeassistant.local` (the reader's own LAN address) and `example.com`
-(a placeholder in sample YAML).
+Two rounds of fixes after live CI runs:
 
-The exclusion list is documented in the workflow with the reason for each
-entry, and the standing rule is stated there: exclusions are for links that
-*cannot* be checked, not for links we would rather not fix. A check that
-reports a known false positive every run teaches people to ignore it — which
-is worse than not having it.
+*False positives.* Patreon returns 403 to automated requests (the link is
+fine in a browser). Excluded, along with `homeassistant.local` (the reader's
+own LAN address), `example.com` (a placeholder in sample YAML) and the
+`family=FontName` placeholder in the font-loader template. Each exclusion
+carries its reason in the workflow, under a standing rule: exclusions are for
+links that *cannot* be checked, not for links we would rather not fix. A
+check that reports a known false positive every run teaches people to ignore
+it, which is worse than not having it.
 
-The library has 7 unique external links in total, so this check is cheap
-insurance rather than a major safeguard.
+*Runtime.* The job was slow because the 13 `github.com` links ran
+unauthenticated into anonymous rate limits, and lychee then retried with
+backoff. Fixed by passing `GITHUB_TOKEN`, capping retries and timeout, and
+enabling lychee's cache.
+
+*Placement.* The job moved out of `verify.yml` and into the weekly
+`upstream-drift.yml`, where it belongs: a rotted external link is upstream
+drift, not a reason to block a pull request. With 7 unique links that do not
+change per commit, running it on every push bought nothing and cost minutes
+on the critical path. Push and PR runs are now `verify.py`, the self-test and
+the token budget only.
 
 ### Repository layout
 

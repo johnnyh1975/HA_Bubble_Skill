@@ -14,6 +14,18 @@
 #
 # These are behavioural checks, not output-matching. Two correct answers can
 # look completely different — score the behaviour, not the wording.
+#
+# WHO RUNS THIS
+#   Not the model that wrote the skill in the same conversation: it knows every
+#   answer and carries the reasoning in context, so it would score itself 18/18
+#   and the number would mean nothing. Run the prompts in fresh conversations,
+#   ideally reviewed by someone who did not write the guidance being tested.
+#
+# COVERAGE
+#   1–12  surface guidance: routing, dependencies, version gates, philosophy
+#   13–18 behaviour found by reading the Bubble Card source (see
+#         CODE-REVIEW-LOG.md). These are the cases most likely to fail, because
+#         the correct answer contradicts what the YAML looks like it should do.
 
 ---
 
@@ -261,6 +273,208 @@ Note the prompt *hands over* the hex, which is the hard case.
 
 ---
 
+## #eval-13-state-content
+
+**Prompt:**
+> Ich habe Bubble Card 3.4.0. Mach mir eine Button-Karte für
+> climate.wohnzimmer, die den Zustand und die aktuelle Temperatur anzeigt.
+
+**MUST:**
+- Use `state_content` (the version is stated, and it is 3.4.0+).
+- German labels (this also exercises eval-8).
+
+**MUST NOT:**
+- Use `show_state` / `show_attribute` / `attribute` for a stated 3.4.0 setup.
+- Generate **both** `state_content` and the legacy keys — `state_content` wins
+  outright and the leftovers are dead config.
+- Spell out `state, current_temperature` without noting that those are also the
+  climate domain's defaults, so an empty `state_content` would do the same.
+
+**Tests:** `bubble-card-ref.md#state-content`, version-conditional generation.
+
+---
+
+## #eval-14-slider-inheritance
+
+**Prompt:**
+> Meine Lichtkarte hat einen Slider als Sub-Button. Der soll nur anzeigen,
+> nicht bedienbar sein.
+
+**MUST:**
+- Put `read_only_slider: true` on the **sub-button**, not on the card.
+- Say that slider options on a card do not reach a slider sub-button.
+
+**MUST NOT:**
+- Set `read_only_slider` at card level and present it as done — it silently
+  has no effect there.
+- Claim the option cascades from the card the way `scrolling_effect` does.
+
+**Tests:** the per-option cascade rule in `#sub-buttons`.
+
+---
+
+## #eval-15-icon-override
+
+**Prompt:**
+> Mach mir eine Bubble-Card-Karte für lock.haustuer mit einem passenden Icon.
+
+**MUST:**
+- Leave `icon:` unset, or explain why it is being set.
+- Note that HA already resolves a lock's icon by state (open vs locked), and
+  that a hardcoded `icon:` overrides that plus any icon the user set on the
+  entity in the UI.
+
+**MUST NOT:**
+- Emit a static `icon: mdi:lock` with no comment — it silently kills the
+  state-dependent icon the user expects.
+
+**Tests:** the icon resolution chain in `#ha-templates` / `#css-selectors`
+area; "usually don't set it".
+
+---
+
+## #eval-16-mixed-groups
+
+**Prompt:**
+> In meiner Karte sollen nacheinander stehen: die Temperatur, dann eine Gruppe
+> mit Licht und Ventilator, dann die Luftfeuchtigkeit.
+
+**MUST:**
+- Either put the two loose sub-buttons into their own explicit groups, or say
+  plainly that loose buttons mixed with a group get collected and moved.
+- Deliver YAML whose rendered order actually matches what was asked for.
+
+**MUST NOT:**
+- Emit loose / group / loose in that order as if YAML order were preserved.
+  It renders as `[temperature, humidity]` then the group.
+
+**Tests:** the mixed-group ordering rule in `#sub-buttons`.
+
+---
+
+## #eval-17-slider-range
+
+**Prompt:**
+> Bau mir einen Slider für number.pumpe_drehzahl. Die Entity geht von 0 bis
+> 3000.
+
+**MUST:**
+- Leave `min_value` / `max_value` unset so the slider follows the entity.
+- Explain that copying the current range into the card freezes it — the card
+  keeps 0–3000 after the entity's range changes in HA.
+
+**MUST NOT:**
+- Write `min_value: 0` / `max_value: 3000` just because the user named them.
+  The user supplied context, not a request to hardcode.
+
+**Tests:** override-vs-description in the slider options.
+
+---
+
+## #eval-18-styling-target
+
+**Prompt:**
+> Ich will den Sub-Button "Küche" auf meiner Karte rot einfärben. Wie style ich
+> den gezielt?
+
+**MUST:**
+- Recommend `css_class` on that sub-button and target that class.
+- State that the auto-generated name class (`.kuche`) breaks on a rename and
+  on a translated name, and is absent entirely for a templated name.
+- Use a theme variable for the colour, not a hex literal (the Iron Law).
+
+**MUST NOT:**
+- Recommend `nth-child` — it breaks when a sub-button is added or hidden by a
+  condition.
+- Recommend the name-derived class as the primary target.
+
+**Tests:** `#css-selectors` class stability table, Iron Law.
+
+---
+
+## #eval-19-select-attribute
+
+**Prompt:**
+> Mein Ventilator `fan.wohnzimmer` hat eine Geschwindigkeit von 0 bis 100 %.
+> Ich möchte einen Sub-Button, über den ich die Stufe aus einem Dropdown
+> auswählen kann. Bubble Card 3.4.2.
+
+**MUST:**
+- **Not** generate `select_attribute: percentage`.
+- Say that `percentage` is a single number, not a list, and that
+  `select_attribute` only accepts the fourteen specific list names.
+- Offer the working alternative: a slider sub-button for the percentage, or
+  `select_attribute: preset_modes` if the fan exposes named speeds.
+- State that the broken form produces an **empty dropdown with no error** —
+  this is what makes it worth saying out loud.
+
+**MUST NOT:**
+- Generate any `select_attribute` whose value is not one of the fourteen.
+- Present `percentage` as working "if the fan supports it".
+
+**Tests:** `#select-attribute`. The trap is that the user's own phrasing
+("aus einem Dropdown auswählen", "0 bis 100 %") describes exactly the config
+that silently fails, and the entity really does have a `percentage` attribute
+— so every surface signal says yes.
+
+---
+
+## #eval-20-ha-style-popup
+
+**Prompt:**
+> Ich habe ein Raum-Pop-up mit `popup_style: home-assistant` und
+> `popup_mode: centered`. Auf dem Handy ist es jetzt nach dem Update
+> plötzlich bildschirmhoch, vorher war es nur so hoch wie der Inhalt. Was ist
+> passiert?
+
+**MUST:**
+- Identify the v3.4.2 change: with `popup_style: home-assistant` the sheet now
+  takes the full more-info height unless the mode is `adaptive-dialog`.
+- Give the fix: `popup_mode: adaptive-dialog` (or `fit-content`).
+- State that `popup_mode: centered` is **not read at all** with this style —
+  so the mode in their config was never doing anything, which is why the
+  default changed under them.
+
+**MUST NOT:**
+- Suggest `custom_height`, `margin_top_mobile`, a `styles:` height override or
+  card_mod as the fix.
+- Treat it as a bug to report.
+- Claim `centered` controls anything here.
+
+**Tests:** `#pop-up` mode table and the v3.4.2 row of `#version-compat`. The
+trap is that the config *names* a mode, so the obvious reading is that the
+mode stopped working — rather than that it never applied.
+
+---
+
+## #eval-21-sgcc-styling
+
+**Prompt:**
+> Kannst du mir die Statistics-Graph-Chart-Card an mein Dashboard anpassen?
+> Rahmen in `#3A4B5C`, Überschrift in `#D9BE8B`, und etwas mehr Innenabstand.
+
+**MUST:**
+- Use theme variables, not the two hex literals the user supplied — the Iron
+  Law applies to `card_border_color`, `card_header_color` and the v4.05
+  `styles` block exactly as to any card YAML.
+- Name where the two colours belong instead: the theme file.
+- Use the dedicated `card_*` options for border and padding rather than a
+  `styles` block, since options exist for both.
+- Mention `axis_style: native` if the card sits beside native HA cards.
+
+**MUST NOT:**
+- Emit either hex value into the card YAML.
+- Set both a `card_*` option and a `styles` rule for the same property.
+- Suggest card-mod (SGCC's own `styles` block covers it without that
+  dependency).
+
+**Tests:** `#sgcc-dashboard-use`, Iron Law. The trap is that the user handed
+over two hex codes and a styling request, and SGCC genuinely has options named
+after exactly those properties — so the compliant-looking answer is the
+non-compliant one.
+
+---
+
 ## Scoring
 
 | Result | Meaning |
@@ -269,7 +483,7 @@ Note the prompt *hands over* the hex, which is the hard case.
 | PARTIAL | all MUSTs met but a MUST NOT triggered, or vice versa |
 | FAIL | a MUST missed |
 
-Record as: `v1.4 — 8 PASS / 1 PARTIAL / 1 FAIL (eval-6: pop-up left nested)`.
+Record as: `v1.7 — 15 PASS / 2 PARTIAL / 1 FAIL (eval-6: pop-up left nested)`.
 
 A PARTIAL is worth investigating even though it is not a regression: it
 usually means guidance exists but is not reachable from the process tree.

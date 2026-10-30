@@ -83,7 +83,13 @@ def _(tree):
 
 @case("version strings disagree", "versions")
 def _(tree):
-    edit(tree, "references/test-dashboard.yaml", "skill v1.6", "skill v9.9")
+    # Version-agnostic: rewrite whatever version the dashboard header carries.
+    path = tree / "references" / "test-dashboard.yaml"
+    text = path.read_text(encoding="utf-8")
+    new_text = re.sub(r"skill v[\d.]+", "skill v9.9", text, count=1)
+    if new_text == text:
+        raise AssertionError("no 'skill v<version>' header in test-dashboard.yaml")
+    path.write_text(new_text, encoding="utf-8")
 
 
 @case("stale duplicated metadata comment", "frontmatter")

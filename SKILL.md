@@ -8,15 +8,15 @@ description: >
   SYMPTOMS: hardcodes hex in YAML · uses pre-v3.2 pop-up format · places pop-up or HBS inside sections: · generates themes from scratch · uses masonry view · skips UI-mode question for Streamline · omits JS font loader · generates automations instead of navigate actions · rebuilds native HA features without advisory · reproduces paid Patreon module code.
 
 metadata:
-  version: 1.6
-  bubble_card: "3.3.0"
+  version: 1.8
+  bubble_card: "3.4.2"
   streamline_card: "0.2.2"
   sidebar_card: "0.1.9.9"
   bubble_card_tools: "1.0.2"   # confirmed current — checked 2026-07-03
   ha_minimum: "2024.3.0"
-  ha_checked: "2026.9"       # guidance verified against HA release notes
+  ha_checked: "2026.10"       # guidance verified against HA release notes
   mushroom: "5.2.2"           # verified against Mushroom source
-  sgcc: "4.02-era"            # README-documented only — minified bundle
+  sgcc: "4.08"                # README-documented — minified bundle, version string readable
   advanced_history: "2.0.1"
 ---
 
@@ -66,9 +66,13 @@ the output type alone — which is why they come first.
 | Pastes existing dashboard YAML | §9 Health-Check Mode — audit, don't regenerate. |
 | Mentions a fixed display — wall panel, kiosk, tablet on the wall | Single-mode theme + `#device-type-profiles` + `#wall-panel-hardening`. |
 | Asks for a card to appear only under some condition — sun, motion, heating, presence | `visibility:` with a condition. Platform conditions (`condition: sun.is_up`) need Bubble Card v3.3.0+; on older versions they degrade silently. Check the version before generating them. |
-| Asks for a graph, chart, history or trend | `graphs-ref.md#graph-decision` first — and ask which graph card they already have before proposing a new dependency; mini-graph-card and SGCC sparkline do the same job — pick the smallest card that answers the question, and name the HACS dependency plus its native fallback. A graph is Bucket 3 content: it belongs on Activity, not Overview. |
+| Wants a card to show an attribute, last-changed, or a specific state line | `bubble-card-ref.md#state-content` — v3.4.0+ uses one `state_content` list instead of `show_state` / `show_attribute` / `attribute` / `show_last_changed` / `show_last_updated`. Check the version before choosing which form to generate. |
+| Wants a name, icon or label that changes with state | `bubble-card-ref.md#ha-templates` — Jinja2 works in `name`, `icon` and `state_content` from v3.4.0. On older versions the raw `{{ }}` shows on the card, so version-gate it. |
+| Asks for a graph, chart, history or trend | `graphs-ref.md#graph-decision` first — and ask which graph card they already have before proposing a new dependency; mini-graph-card and SGCC sparkline do the same job — pick the smallest card that answers the question, and name the HACS dependency plus its native fallback. A graph is Bucket 3 content: it belongs on Activity, not Overview. For **several** graphs, prefer SGCC `graph_group` (pages in one card) and `sync_group` (one picker drives the rest) over a stack of near-identical cards. |
 | Wants to "see the history of everything" / a page full of graphs | Offer the **Advanced History** panel (`graphs-ref.md#advanced-history`) instead of building graph cards. Exploration tools do not belong on a glanceable dashboard. |
 | Mentions Mushroom colours not following the accent | ZONE 6 bridge: `accent-color-rgb` → state variables. No `mush-rgb-primary`, no `mush-rgb-state-switch`. |
+| Wants a dropdown to pick a mode, source, speed, activity — or to arm/disarm an alarm | `bubble-card-ref.md#select-attribute` — `select_attribute` takes **only fourteen specific names**; anything else renders an empty dropdown with no error. `fan_speed_list` / `activity_list` / `direction` / `alarm_modes` need v3.4.2+, and the alarm keypad also needs HA 2026.3+ with a numeric code. |
+| Asks for a pop-up that looks like HA's own more-info dialog, or one holding a map or chart that fights the swipe | `popup_style: home-assistant` (v3.4.0+ — mode only sets sheet height, `centered` does nothing); `slide_to_close: header` (v3.4.1+) keeps the dismiss gesture on the header. Both are ignored below their version rather than erroring. |
 
 **None of these is a refusal.** They add a sentence or a question to the
 answer — they never withhold the output the user asked for.
@@ -101,6 +105,7 @@ User request
 Identify output type
   ├── Pop-up           → bubble-card-ref.md#version-compat + #pop-up
   ├── Button / slider  → bubble-card-ref.md#button
+  │                      (state line → #state-content, v3.4.0+)
   ├── Chip bar / footer
   │    menu / icon row  → bubble-card-ref.md#sub-buttons (+ #sub-buttons-only)
   ├── Media player     → bubble-card-ref.md#media-player
@@ -153,7 +158,7 @@ Signals from the scan unresolved? → resolve before delivering, not after
 |---------|---------|
 | "This is v3.1 pop-up format, it's fine" | CHECK. v3.2 migrated all pop-ups. Generate the standalone format with cards: always. |
 | "I'll use card-mod to style this Bubble Card" | AVOID. Use styles: in the card YAML or a Bubble Card module instead. |
-| "subButtonIcon[0] is the first main sub-button" | WRONG since v3.1. Bottom sub-buttons are indexed first. Main sub-buttons come after. |
+| "subButtonIcon[0] is the first main sub-button" | WRONG since v3.1. Bottom sub-buttons are indexed first. And `subButtonState[]` disagreed with it until v3.4.2 — it skipped ungrouped **bottom** sub-buttons entirely. Below v3.4.2, read the entity through `hass` instead. |
 | "I'll use !include_dir_named for Streamline templates" | ASK FIRST. Only works in YAML-mode Lovelace. UI-mode users get a parse error. |
 | "The template is added, let's move on" | NOTE. Streamline revalidates templates in the background after the first page load — most edits propagate automatically. If a template doesn't appear, hard-refresh first. HA restart only if the Streamline card resource is missing entirely. |
 | "The HA default styling module is required" | NO. It is optional. The skill outputs a merged theme file that handles Bubble ↔ HA alignment. |
@@ -164,6 +169,9 @@ Signals from the scan unresolved? → resolve before delivering, not after
 | "I'll generate automations for this dashboard button" | STOP. Send the user to ha-yaml for the automation. Only generate the navigate tap_action here. |
 | "A button card is fine for this fan/vacuum/lock" | CHECK. Use bubble-card-ref.md#entity-domain-map first — complex domains need sub-button patterns, not a plain switch button. |
 | "It's a calendar entity colour, hex is fine there" | NO. `color:` accepts a colour **name** which resolves to `var(--<name>-color)`. Use `color: accent`, never a hex. The Iron Law has no calendar exception. |
+| "`select_attribute` takes any attribute that has a list" | NO. It is a closed list of fourteen names (`#select-attribute`). `percentage` on a fan and `mode` on a humidifier both look right and both open an **empty dropdown with no error**. |
+| "I'll add a `styles:` rule so the icon stays readable on that light sub-button" | OBSOLETE from v3.4.1. Bubble Card picks the tone by measured WCAG contrast. An override now fights a correct answer — delete it. |
+| "SGCC has its own styling options now, so a hex there is fine" | NO. `card_background_color`, `card_border_*`, `card_header_color` and the v4.05 `styles` block are all Iron Law surface. Variables, not literals. |
 
 ---
 
@@ -172,7 +180,7 @@ Signals from the scan unresolved? → resolve before delivering, not after
 Read the relevant file BEFORE generating YAML. Every anchor is reachable.
 
 **bubble-card-ref.md** — any Bubble Card YAML:
-`#version-compat`★ · `#pop-up` · `#button` · `#sub-buttons` · `#horizontal-buttons-stack` · `#media-player` · `#climate` · `#cover` · `#select` · `#separator` · `#calendar` · `#sub-buttons-only` · `#css-variables` · `#js-templates` · `#modules` · `#module-authoring` · `#actions` · `#entity-domain-map`★ · `#touch-targets`
+`#version-compat`★ · `#pop-up` · `#button` · `#sub-buttons` · `#select-attribute` · `#horizontal-buttons-stack` · `#media-player` · `#climate` · `#cover` · `#select` · `#separator` · `#calendar` · `#sub-buttons-only` · `#css-variables` · `#js-templates` · `#modules` · `#module-authoring` · `#state-content` · `#ha-templates` · `#css-selectors` · `#actions` · `#entity-domain-map`★ · `#touch-targets`
 
 **health-check-ref.md** — auditing pasted dashboard YAML (§9):
 `#parse-steps`★ · `#finding-types`★ · `#output-format`★ · `#tone-guides` · `#partial-yaml`
@@ -183,7 +191,7 @@ The three starred anchors are the core path; the other two are situational.
 
 **eval-set.md** — behavioural regression tests. Not read during normal
 operation; used when validating a skill release.
-`#eval-1-native-first` · `#eval-2-calendar-iron-law` · `#eval-3-cover-tilt` · `#eval-4-paid-module` · `#eval-5-mushroom-switch-colour` · `#eval-6-masonry-migration` · `#eval-7-automate-first` · `#eval-8-language` · `#eval-9-accessibility` · `#eval-10-unsupported-domain` · `#eval-11-platform-condition` · `#eval-12-graph-request`
+`#eval-1-native-first` · `#eval-2-calendar-iron-law` · `#eval-3-cover-tilt` · `#eval-4-paid-module` · `#eval-5-mushroom-switch-colour` · `#eval-6-masonry-migration` · `#eval-7-automate-first` · `#eval-8-language` · `#eval-9-accessibility` · `#eval-10-unsupported-domain` · `#eval-11-platform-condition` · `#eval-12-graph-request` · `#eval-13-state-content` · `#eval-14-slider-inheritance` · `#eval-15-icon-override` · `#eval-16-mixed-groups` · `#eval-17-slider-range` · `#eval-18-styling-target` · `#eval-19-select-attribute` · `#eval-20-ha-style-popup` · `#eval-21-sgcc-styling`
 
 **module-authoring-ref.md** — writing a Bubble Card module's `editor:` schema,
 or packaging/sharing a module: `#basic-structure` · `#field-properties` ·
@@ -449,6 +457,12 @@ Pop-ups are the primary progressive disclosure mechanism — group all room cont
 - `popup_mode: fit-content` for simple single-entity pop-ups
 - `popup_mode: centered` for cameras or complex layouts
 - Always `with_bottom_offset: true` when HBS footer is present
+- `popup_style: home-assistant` (v3.4.0+) when the user wants it to feel like
+  HA's own more-info dialog. With that style the mode only sets the sheet
+  height — `default` is full height, `adaptive-dialog` follows the content, and
+  `centered` does nothing. See `bubble-card-ref.md#pop-up`.
+- `slide_to_close: header` (v3.4.1+) when the pop-up holds a map, a chart or a
+  scrollable list the user needs to drag
 
 ---
 
